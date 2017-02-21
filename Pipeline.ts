@@ -5,8 +5,6 @@ import {ExecutionTracer} from './ExecutionTracer';
 import {TypeDeducer} from './TypeDeducer';
 import {SimpleTypeDeducer} from './SimpleTypeDeducer';
 
-import "reflect-metadata";
-
 export class Pipeline {
     repoUri : string;
     workingDir : string;
@@ -15,9 +13,9 @@ export class Pipeline {
     run(){
         console.log("Starting");
         var workspace = new Workspace(this.workingDir, this.repoUri);
-        var tracer = new ExecutionTracer(workspace);
-        var types = this.typeDeducer.getAllTypeDefinitions(tracer.trace());
-        workspace.exportTypeDefinitions(types);
+        var executions = new ExecutionTracer(workspace).trace();
+        var types = this.typeDeducer.getAllTypeDefinitions(executions);
+        workspace.exportTypeDefinitions(types, executions);
     }
 }
 
