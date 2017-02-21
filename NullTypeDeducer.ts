@@ -7,8 +7,10 @@ import {SetDictionary} from './Utils';
 export class NullTypeDeducer extends TypeDeducer {
     getTypeFor(name: string, calls: FunctionCall[]): FunctionTypeDefinition {
 
-        var argTypes = new SetDictionary<number, Type>();
-        argTypes.getValue(0).add(Type.NULL);
+        var argTypes = TypeDeducer.initializeArgTypesArray(calls);
+        for (var i=0; i<argTypes.length; i++){
+            argTypes[i].add(Type.NULL);
+        }
 
         var returnValueType = new Set<Type>();
         returnValueType.add(Type.NULL);

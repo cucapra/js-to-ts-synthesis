@@ -6,13 +6,14 @@ import {SetDictionary} from './Utils';
 
 export class SimpleTypeDeducer extends TypeDeducer {
     getTypeFor(name: string, calls: FunctionCall[]): FunctionTypeDefinition {
-        var argTypes = new SetDictionary<number, Type>();
+        var argTypes = TypeDeducer.initializeArgTypesArray(calls);
         var returnValueType = new Set<Type>();
 
         for (var call of calls){
-            for (var arg of call.args.keys()){
-                argTypes.getValue(arg).add(this.typeOf(call.args.getValue(arg)));
-            }
+            call.args.forEach((arg, i) => {
+                argTypes[i].add(this.typeOf(arg));
+            });
+
             returnValueType.add(this.typeOf(call.returnValue));
         }
 

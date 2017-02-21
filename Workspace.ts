@@ -15,8 +15,8 @@ function typeDefinition(types: Set<Type>): string {
 function definitionFor(func: FunctionTypeDefinition): string {
     var args : string[] = [];
 
-    func.argTypes.forEach((arg, types) => {
-        args.push(`arg${arg}: ${typeDefinition(types)}`);
+    func.argTypes.forEach((types, i) => {
+        args.push(`arg${i}: ${typeDefinition(types)}`);
     });
     
     return `export declare function ${func.name}(${args.join(", ")}): ${typeDefinition(func.returnValueType)};\n`
@@ -25,9 +25,9 @@ function definitionFor(func: FunctionTypeDefinition): string {
 function validatingTestFor(func: FunctionTypeDefinition, call: FunctionCall): string {
     var test = '';
     var args : string[] = [];
-    call.args.forEach((argIndex, arg) => {
-        test += `var arg${argIndex}: ${typeDefinition(func.argTypes.getValue(argIndex))} = ${JSON.stringify(arg)};\n`;
-        args.push(`arg${argIndex}`);
+    call.args.forEach((arg, i) => {
+        test += `var arg${i}: ${typeDefinition(func.argTypes[i])} = ${JSON.stringify(arg)};\n`;
+        args.push(`arg${i}`);
     });
 
     test += `var result: ${typeDefinition(func.returnValueType)} = ${func.name}(${args.join(", ")});\n`;

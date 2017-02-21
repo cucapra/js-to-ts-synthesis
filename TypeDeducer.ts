@@ -9,9 +9,9 @@ export enum Type {
 
 export class FunctionTypeDefinition {
     name: string;
-    argTypes: SetDictionary<number, Type>;
+    argTypes: Set<Type>[];
     returnValueType: Set<Type>;
-    constructor(name: string, argTypes: SetDictionary<number, Type>, returnValueType: Set<Type>){
+    constructor(name: string, argTypes: Set<Type>[], returnValueType: Set<Type>){
         this.name = name;
         this.argTypes = argTypes;
         this.returnValueType = returnValueType;
@@ -27,6 +27,19 @@ export abstract class TypeDeducer {
         });
 
         return result;
+    }
+
+    protected static initializeArgTypesArray(calls: FunctionCall[]): Set<Type>[]{
+        var numArgs = 0;
+        for (var call of calls){
+            numArgs = Math.max(numArgs, call.args.length);
+        }
+
+        var argTypes : Set<Type>[] = [];
+        for (var i=0; i<numArgs; i++){
+            argTypes.push(new Set<Type>());
+        }
+        return argTypes;
     }
 
     protected abstract getTypeFor(name: string, calls: FunctionCall[]): FunctionTypeDefinition;

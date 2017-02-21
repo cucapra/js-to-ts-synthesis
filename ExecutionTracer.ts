@@ -39,9 +39,9 @@ export class Function {
 }
 
 export class FunctionCall {
-    args: Dictionary<number, any>;
+    args: any[];
     returnValue: any;
-    constructor(args:Dictionary<number, any>, returnValue:any){
+    constructor(args:any[], returnValue:any){
         this.args = args;
         this.returnValue = returnValue;
     }
@@ -116,11 +116,17 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });`);
                 }
                 
                 if (!ExecutionTracer.FUNCTIONS_TO_IGNORE.contains(entry.name)){
-                    var argsDict = new Dictionary<number, any>();
+                    
+                    var numArgs = 0;
                     for (var k in entry.args){
-                        argsDict.setValue(parseInt(k), entry.args[k]);
+                        numArgs++;
                     }
-                    calls.getValue(new Function(entry.name, entry.file)).push(new FunctionCall(argsDict, exit.returnValue));
+
+                    var argsList = [];
+                    for (var i=0; i<numArgs; i++){
+                        argsList.push(entry.args[i]);
+                    }
+                    calls.getValue(new Function(entry.name, entry.file)).push(new FunctionCall(argsList, exit.returnValue));
                 }
             }
         }
