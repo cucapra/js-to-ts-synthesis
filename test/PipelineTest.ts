@@ -20,7 +20,7 @@ class PipelineTest {
         pipeline.workingDir = this.tempFolder();
         pipeline.run();
 
-        assert.equal(fs.readFileSync(path.join(pipeline.workingDir, 'lib', 'index.d.ts'), 'utf-8'), "export declare function abs(arg0: string): string;\n");
+        assert.equal(fs.readFileSync(path.join(pipeline.workingDir, 'lib', 'index.d.ts'), 'utf-8'), "export declare function abs(input: string): string;\n");
     }
 
     @mocha.test

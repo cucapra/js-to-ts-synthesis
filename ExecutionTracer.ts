@@ -3,7 +3,6 @@ import * as fs from 'fs';
 
 import {Dictionary, Set, Stack} from 'typescript-collections';
 
-import {ListDictionary} from './Utils';
 import {Workspace} from './Workspace';
 
 // No definition file for this one.
@@ -12,6 +11,7 @@ var LineReaderSync = require('line-reader-sync');
 interface FunctionEntry {
     name: string;
     file: string;
+    argNames: string[];
     args: any;/*Dictionary<number, any>*/
 }
 
@@ -24,7 +24,7 @@ interface FunctionExit {
 
 interface InstrumentationLine {
     // Exactly one of these will be set.
-
+    
     entry: FunctionEntry;
     exit: FunctionExit;
 }
@@ -44,6 +44,15 @@ export class FunctionCall {
     constructor(args:any[], returnValue:any){
         this.args = args;
         this.returnValue = returnValue;
+    }
+}
+
+export class FunctionCalls {
+    argNames: string[];
+    calls: FunctionCall[];
+    constructor(argNames: string[], calls:FunctionCall[]){
+        this.argNames = argNames;
+        this.calls = calls;
     }
 }
 
@@ -67,7 +76,7 @@ export class ExecutionTracer {
         this.workspace = workspace;
     }
 
-    trace() : ListDictionary<Function, FunctionCall> {
+    trace() : Dictionary<Function, FunctionCalls> {
         var instrumentationOutputFile = path.join(this.workspace.getDirectory(), 'instrumentation_output.txt');
 
         // Add some code to trace function inputs and outputs, using https://www.npmjs.com/package/njstrace
@@ -94,8 +103,8 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });`);
         return this.readInstrumentationOutput(instrumentationOutputFile);
     }
 
-    private readInstrumentationOutput(instrumentationOutputFile: string): ListDictionary<Function, FunctionCall> {
-        var calls = new ListDictionary<Function, FunctionCall>();
+    private readInstrumentationOutput(instrumentationOutputFile: string): Dictionary<Function, FunctionCalls> {
+        var calls = new Dictionary<Function, FunctionCalls>();
         var callStack = new Stack<FunctionEntry>();
 
         var lrs = new LineReaderSync(instrumentationOutputFile);
@@ -126,7 +135,14 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });`);
                     for (var i=0; i<numArgs; i++){
                         argsList.push(entry.args[i]);
                     }
-                    calls.getValue(new Function(entry.name, entry.file)).push(new FunctionCall(argsList, exit.returnValue));
+
+                    var func = new Function(entry.name, entry.file);
+                    
+                    // If this is the first instance of this function, pull in the arg names as well.
+                    if (!calls.containsKey(func)){
+                        calls.setValue(func, new FunctionCalls(entry.argNames, []));
+                    }
+                    calls.getValue(func).calls.push(new FunctionCall(argsList, exit.returnValue));
                 }
             }
         }

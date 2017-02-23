@@ -2,10 +2,10 @@ import * as process from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import {Set} from 'typescript-collections';
+import {Set, Dictionary} from 'typescript-collections';
 import {ListDictionary} from './Utils';
 
-import {Function, FunctionCall} from './ExecutionTracer';
+import {Function, FunctionCall, FunctionCalls} from './ExecutionTracer';
 import {FunctionTypeDefinition, Type} from './TypeDeducer';
 
 function typeDefinition(types: Set<Type>): string {
@@ -15,8 +15,8 @@ function typeDefinition(types: Set<Type>): string {
 function definitionFor(func: FunctionTypeDefinition): string {
     var args : string[] = [];
 
-    func.argTypes.forEach((types, i) => {
-        args.push(`arg${i}: ${typeDefinition(types)}`);
+    func.argTypes.forEach((arg, i) => {
+        args.push(`${arg.name}: ${typeDefinition(arg.type)}`);
     });
     
     return `export declare function ${func.name}(${args.join(", ")}): ${typeDefinition(func.returnValueType)};\n`
@@ -26,8 +26,8 @@ function validatingTestFor(func: FunctionTypeDefinition, call: FunctionCall): st
     var test = '';
     var args : string[] = [];
     call.args.forEach((arg, i) => {
-        test += `var arg${i}: ${typeDefinition(func.argTypes[i])} = ${JSON.stringify(arg)};\n`;
-        args.push(`arg${i}`);
+        test += `var ${func.argTypes[i].name}: ${typeDefinition(func.argTypes[i].type)} = ${JSON.stringify(arg)};\n`;
+        args.push(func.argTypes[i].name);
     });
 
     test += `var result: ${typeDefinition(func.returnValueType)} = ${func.name}(${args.join(", ")});\n`;
@@ -46,7 +46,7 @@ export class Workspace {
         this.runCommand("npm install");
 
         // Install the tracer.
-        this.runCommand("npm install njstrace");
+        this.runCommand("npm install https://github.com/cucapra/njsTrace");
     }
 
     getDirectory(){
@@ -61,7 +61,7 @@ export class Workspace {
         this.runCommand("npm test");
     }
 
-    exportTypeDefinitions(typeDefinitions: ListDictionary<string, FunctionTypeDefinition>, executions: ListDictionary<Function, FunctionCall>){
+    exportTypeDefinitions(typeDefinitions: ListDictionary<string, FunctionTypeDefinition>, executions: Dictionary<Function, FunctionCalls>){
         var typeTestsFile = path.join(this.getTestDirectory(), 'tests.ts')
         var typeTestsFd = fs.openSync(typeTestsFile, 'w');
 
@@ -74,7 +74,7 @@ export class Workspace {
                 fs.writeSync(definitionFd, definitionFor(func));
                 
                 fs.writeSync(typeTestsFd, `import {${func.name}} from '${definitionFileNoExt}';\n`);
-                for (var call of executions.getValue(new Function(func.name, file))){
+                for (var call of executions.getValue(new Function(func.name, file)).calls){
                     fs.writeSync(typeTestsFd, validatingTestFor(func, call));
                 }
             }
@@ -87,6 +87,6 @@ export class Workspace {
     }
 
     private runCommand(command: string){
-        process.execSync(command, {cwd: this.directory, stdio: 'inherit'});
+        process.execSync(command, {cwd: this.directory});
     }
 }
