@@ -29,31 +29,19 @@ interface InstrumentationLine {
     exit: FunctionExit;
 }
 
-export class Function {
+export interface Function {
     name: string;
     file: string;
-    constructor(name:string, file:string){
-        this.name = name;
-        this.file = file;
-    }
 }
 
-export class FunctionCall {
+export interface FunctionCall {
     args: any[];
     returnValue: any;
-    constructor(args:any[], returnValue:any){
-        this.args = args;
-        this.returnValue = returnValue;
-    }
 }
 
-export class FunctionCalls {
+export interface FunctionCalls {
     argNames: string[];
     calls: FunctionCall[];
-    constructor(argNames: string[], calls:FunctionCall[]){
-        this.argNames = argNames;
-        this.calls = calls;
-    }
 }
 
 class UnbalancedEntryExitError extends Error {
@@ -136,13 +124,13 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });`);
                         argsList.push(entry.args[i]);
                     }
 
-                    var func = new Function(entry.name, entry.file);
+                    var func = {name: entry.name, file: entry.file};
                     
                     // If this is the first instance of this function, pull in the arg names as well.
                     if (!calls.containsKey(func)){
-                        calls.setValue(func, new FunctionCalls(entry.argNames, []));
+                        calls.setValue(func, {argNames: entry.argNames, calls: []});
                     }
-                    calls.getValue(func).calls.push(new FunctionCall(argsList, exit.returnValue));
+                    calls.getValue(func).calls.push({args: argsList, returnValue: exit.returnValue});
                 }
             }
         }

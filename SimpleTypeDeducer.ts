@@ -17,7 +17,7 @@ export class SimpleTypeDeducer extends TypeDeducer {
             returnValueType.add(this.typeOf(call.returnValue));
         }
 
-        return new FunctionTypeDefinition(name, argTypes, returnValueType);
+        return {name: name, argTypes: argTypes, returnValueType: returnValueType};
     }
 
     private typeOf(value: any): Type {

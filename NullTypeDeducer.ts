@@ -15,6 +15,6 @@ export class NullTypeDeducer extends TypeDeducer {
         var returnValueType = new Set<Type>();
         returnValueType.add(Type.NULL);
 
-        return new FunctionTypeDefinition(name, argTypes, returnValueType);
+        return {name: name, argTypes: argTypes, returnValueType: returnValueType};
     }
 }

@@ -74,7 +74,7 @@ export class Workspace {
                 fs.writeSync(definitionFd, definitionFor(func));
                 
                 fs.writeSync(typeTestsFd, `import {${func.name}} from '${definitionFileNoExt}';\n`);
-                for (var call of executions.getValue(new Function(func.name, file)).calls){
+                for (var call of executions.getValue({name: func.name, file: file}).calls){
                     fs.writeSync(typeTestsFd, validatingTestFor(func, call));
                 }
             }

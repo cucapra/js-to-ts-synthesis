@@ -7,24 +7,15 @@ export enum Type {
     NULL, UNDEFINED, BOOLEAN, NUMBER, STRING, FUNCTION, OBJECT
 }
 
-export class ArgumentType {
+export interface ArgumentType {
     name: string;
     type: Set<Type>;
-    constructor (name: string, type: Set<Type>){
-        this.name = name;
-        this.type = type;
-    }
 }
 
-export class FunctionTypeDefinition {
+export interface FunctionTypeDefinition {
     name: string;
     argTypes: ArgumentType[];
     returnValueType: Set<Type>;
-    constructor(name: string, argTypes: ArgumentType[], returnValueType: Set<Type>){
-        this.name = name;
-        this.argTypes = argTypes;
-        this.returnValueType = returnValueType;
-    }
 }
 
 export abstract class TypeDeducer {
@@ -48,7 +39,7 @@ export abstract class TypeDeducer {
         for (var i=0; i<numArgs; i++){
             // Get the name if it's provided. Otherwise make one up.
             var name = (i < calls.argNames.length) ? calls.argNames[i] : `arg${i}`;
-            argTypes.push(new ArgumentType(name, new Set<Type>()));
+            argTypes.push({name: name, type: new Set<Type>()});
         }
         return argTypes;
     }
