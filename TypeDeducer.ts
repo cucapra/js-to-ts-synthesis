@@ -1,7 +1,7 @@
-import {Set, Dictionary} from 'typescript-collections';
+import {Set, Dictionary} from "typescript-collections";
 
-import {FunctionCall, FunctionCalls} from './ExecutionTracer'
-import {SetDictionary, ListDictionary} from './Utils';
+import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
+import {SetDictionary, ListDictionary} from "./Utils";
 
 export enum Type {
     NULL, UNDEFINED, BOOLEAN, NUMBER, STRING, FUNCTION, OBJECT
@@ -20,7 +20,7 @@ export interface FunctionTypeDefinition {
 
 export abstract class TypeDeducer {
     getAllTypeDefinitions(executions: Dictionary<string, FunctionCalls>): ListDictionary<string, FunctionTypeDefinition> {
-        var result = new ListDictionary<string, FunctionTypeDefinition>();
+        let result = new ListDictionary<string, FunctionTypeDefinition>();
 
         executions.forEach((name, funcExecutions) => {
             result.getValue(funcExecutions.file).push(this.getTypeFor(name, funcExecutions));
@@ -29,16 +29,16 @@ export abstract class TypeDeducer {
         return result;
     }
 
-    protected static initializeArgTypesArray(calls: FunctionCalls): ArgumentType[]{
-        var numArgs = 0;
-        for (var call of calls.calls){
+    protected static initializeArgTypesArray(calls: FunctionCalls): ArgumentType[] {
+        let numArgs = 0;
+        for (let call of calls.calls){
             numArgs = Math.max(numArgs, call.args.length);
         }
 
-        var argTypes : ArgumentType[] = [];
-        for (var i=0; i<numArgs; i++){
+        let argTypes: ArgumentType[] = [];
+        for (let i = 0; i < numArgs; i++) {
             // Get the name if it's provided. Otherwise make one up.
-            var name = (i < calls.argNames.length) ? calls.argNames[i] : `arg${i}`;
+            let name = (i < calls.argNames.length) ? calls.argNames[i] : `arg${i}`;
             argTypes.push({name: name, type: new Set<Type>()});
         }
         return argTypes;

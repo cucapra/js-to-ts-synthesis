@@ -1,30 +1,30 @@
-import * as path from 'path';
-import * as fs from 'fs';
+import * as path from "path";
+import * as fs from "fs";
 
-import {Dictionary, Set, Stack} from 'typescript-collections';
+import {Dictionary, Set, Stack} from "typescript-collections";
 
-import {Workspace} from './Workspace';
+import {Workspace} from "./Workspace";
 
 // No definition file for this one.
-var LineReaderSync = require('line-reader-sync');
+let LineReaderSync = require("line-reader-sync");
 
 interface FunctionEntry {
     name: string;
     file: string;
     argNames: string[];
-    args: any;/*Dictionary<number, any>*/
+    args: any; /*Dictionary<number, any>*/
 }
 
 interface FunctionExit {
     name: string;
     file: string;
     // exception: boolean; (Might be useful later)
-    returnValue: any
+    returnValue: any;
 }
 
 interface InstrumentationLine {
     // Exactly one of these will be set.
-    
+
     entry: FunctionEntry;
     exit: FunctionExit;
 }
@@ -48,40 +48,39 @@ class UnbalancedEntryExitError extends Error {
 
 export class ExecutionTracer {
     private static FUNCTIONS_TO_IGNORE = (function(){
-        var set = new Set<string>();
+        let set = new Set<string>();
         set.add("[Anonymous]");
         return set;
     })();
 
-    private workspace : Workspace;
+    private workspace: Workspace;
 
 
-    constructor(workspace : Workspace){
+    constructor(workspace: Workspace) {
         this.workspace = workspace;
     }
 
-    trace() : Dictionary<string, FunctionCalls> {
-        var exportedFunctions = this.workspace.getExportedFunctions();
-        var instrumentationOutputFile = path.join(this.workspace.directory, 'instrumentation_output.txt');
+    trace(): Dictionary<string, FunctionCalls> {
+        let exportedFunctions = this.workspace.getExportedFunctions();
+        let instrumentationOutputFile = path.join(this.workspace.directory, "instrumentation_output.txt");
 
         // Add some code to trace function inputs and outputs, using https://www.npmjs.com/package/njstrace
         // This extra logic to prepended to each test file.
-        var testDirectory = this.workspace.testDirectory;
-        var es6Enabled = this.workspace.es6Enabled;
-        for (var testFile of fs.readdirSync(testDirectory)) {
+        let testDirectory = this.workspace.testDirectory;
+        let es6Enabled = this.workspace.es6Enabled;
+        for (let testFile of fs.readdirSync(testDirectory)) {
             testFile = path.join(testDirectory, testFile);
-            if (path.extname(testFile)=='.js'){
-                
-                var source = fs.readFileSync(testFile, 'utf-8');
-                var useStrict = source.indexOf("'use strict';\n")==0;
-                if (useStrict){
+            if (path.extname(testFile) === ".js") {
+
+                let source = fs.readFileSync(testFile, "utf-8");
+                let useStrict = source.indexOf("'use strict';\n") === 0;
+                if (useStrict)
                     source = source.substr("'use strict';\n".length);
-                }
 
                 fs.writeFileSync(testFile, `
-${useStrict ? "'use strict';" : ''}
+${useStrict ? "'use strict';" : ""}
 /*eslint-disable */
-${es6Enabled ? "require('babel-register');" : ''}
+${es6Enabled ? "require('babel-register');" : ""}
 var Formatter = require('njstrace/lib/formatter.js');
 var fs = require('fs');
 var outFd = fs.openSync('${instrumentationOutputFile}', 'a');
@@ -103,40 +102,40 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });
     }
 
     private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: string[]): Dictionary<string, FunctionCalls> {
-        var calls = new Dictionary<string, FunctionCalls>();
-        var callStack = new Stack<FunctionEntry>();
+        let calls = new Dictionary<string, FunctionCalls>();
+        let callStack = new Stack<FunctionEntry>();
 
-        var lrs = new LineReaderSync(instrumentationOutputFile);
+        let lrs = new LineReaderSync(instrumentationOutputFile);
 
-        while (true){
-            var line = lrs.readline();
-            if (line==null) break;
-            var lineObj = <InstrumentationLine>JSON.parse(line);
-            if (lineObj.entry!=null){
+        while (true) {
+            let line = lrs.readline();
+            if (line == null) break;
+            let lineObj = <InstrumentationLine>JSON.parse(line);
+            if (lineObj.entry != null) {
                 callStack.push(lineObj.entry);
             }
-            else{
-                var exit = lineObj.exit;
-                var entry = callStack.pop();
+            else {
+                let exit = lineObj.exit;
+                let entry = callStack.pop();
 
-                if (entry.name!=exit.name || entry.file!=exit.file){
+                if (entry.name !== exit.name || entry.file !== exit.file) {
                     throw new UnbalancedEntryExitError(entry, exit);
                 }
-                
-                if (!ExecutionTracer.FUNCTIONS_TO_IGNORE.contains(entry.name)){
-                    
-                    var numArgs = 0;
-                    for (var k in entry.args){
+
+                if (!ExecutionTracer.FUNCTIONS_TO_IGNORE.contains(entry.name)) {
+
+                    let numArgs = 0;
+                    for (let k in entry.args) {
                         numArgs++;
                     }
 
-                    var argsList = [];
-                    for (var i=0; i<numArgs; i++){
+                    let argsList = [];
+                    for (let i = 0; i < numArgs; i++) {
                         argsList.push(entry.args[i]);
                     }
-                    
+
                     // If this is the first instance of this function, pull in the arg names as well.
-                    if (!calls.containsKey(entry.name)){
+                    if (!calls.containsKey(entry.name)) {
                         calls.setValue(entry.name, {file: entry.file, argNames: entry.argNames, calls: []});
                     }
                     calls.getValue(entry.name).calls.push({args: argsList, returnValue: exit.returnValue});
@@ -151,10 +150,10 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });
         return calls;
     }
 
-    private checkCoverage(calls: Dictionary<string, FunctionCalls>, exportedFunctions: string[]){
-        var exportedFunctionsWithNoTests = 0;
-        for (var f of exportedFunctions){
-            if (!calls.containsKey(f)){
+    private checkCoverage(calls: Dictionary<string, FunctionCalls>, exportedFunctions: string[]) {
+        let exportedFunctionsWithNoTests = 0;
+        for (let f of exportedFunctions){
+            if (!calls.containsKey(f)) {
                 console.log(`Note: ${f} has no tests, and thus will have no type signature.`);
                 exportedFunctionsWithNoTests++;
             }
