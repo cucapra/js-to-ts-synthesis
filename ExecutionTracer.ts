@@ -29,17 +29,13 @@ interface InstrumentationLine {
     exit: FunctionExit;
 }
 
-export interface Function {
-    name: string;
-    file: string;
-}
-
 export interface FunctionCall {
     args: any[];
     returnValue: any;
 }
 
 export interface FunctionCalls {
+    file: string; // The file where the function is defined.
     argNames: string[];
     calls: FunctionCall[];
 }
@@ -64,35 +60,50 @@ export class ExecutionTracer {
         this.workspace = workspace;
     }
 
-    trace() : Dictionary<Function, FunctionCalls> {
-        var instrumentationOutputFile = path.join(this.workspace.getDirectory(), 'instrumentation_output.txt');
+    trace() : Dictionary<string, FunctionCalls> {
+        var exportedFunctions = this.workspace.getExportedFunctions();
+        var instrumentationOutputFile = path.join(this.workspace.directory, 'instrumentation_output.txt');
 
         // Add some code to trace function inputs and outputs, using https://www.npmjs.com/package/njstrace
         // This extra logic to prepended to each test file.
-        var testDirectory = this.workspace.getTestDirectory();
+        var testDirectory = this.workspace.testDirectory;
+        var es6Enabled = this.workspace.es6Enabled;
         for (var testFile of fs.readdirSync(testDirectory)) {
             testFile = path.join(testDirectory, testFile);
-            var source = fs.readFileSync(testFile);
+            if (path.extname(testFile)=='.js'){
+                
+                var source = fs.readFileSync(testFile, 'utf-8');
+                var useStrict = source.indexOf("'use strict';\n")==0;
+                if (useStrict){
+                    source = source.substr("'use strict';\n".length);
+                }
 
-            fs.writeFileSync(testFile, `
+                fs.writeFileSync(testFile, `
+${useStrict ? "'use strict';" : ''}
+/*eslint-disable */
+${es6Enabled ? "require('babel-register');" : ''}
 var Formatter = require('njstrace/lib/formatter.js');
 var fs = require('fs');
-var out = fs.createWriteStream('${instrumentationOutputFile}', {'flags': 'a'});
+var outFd = fs.openSync('${instrumentationOutputFile}', 'a');
+var exportedFunctions = ${JSON.stringify(exportedFunctions)};
 function MyFormatter() {}
 require('util').inherits(MyFormatter, Formatter);
-MyFormatter.prototype.onEntry = function(args) {out.write(JSON.stringify({'entry': args}) + '\\n');};
-MyFormatter.prototype.onExit = function(args) {out.write(JSON.stringify({'exit': args}) + '\\n')};
-var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });`);
+MyFormatter.prototype.onEntry = function(args) {if (exportedFunctions.indexOf(args.name)>-1) { fs.writeSync(outFd, JSON.stringify({'entry': args}) + '\\n'); }};
+MyFormatter.prototype.onExit = function(args) {if (exportedFunctions.indexOf(args.name)>-1) { fs.writeSync(outFd, JSON.stringify({'exit': args}) + '\\n'); }};
+var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });
+/*eslint-enable */
+`);
 
-            fs.appendFileSync(testFile, source);
+                fs.appendFileSync(testFile, source);
+            }
         }
 
-        this.workspace.runTests()
-        return this.readInstrumentationOutput(instrumentationOutputFile);
+        this.workspace.runTests();
+        return this.readInstrumentationOutput(instrumentationOutputFile, exportedFunctions);
     }
 
-    private readInstrumentationOutput(instrumentationOutputFile: string): Dictionary<Function, FunctionCalls> {
-        var calls = new Dictionary<Function, FunctionCalls>();
+    private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: string[]): Dictionary<string, FunctionCalls> {
+        var calls = new Dictionary<string, FunctionCalls>();
         var callStack = new Stack<FunctionEntry>();
 
         var lrs = new LineReaderSync(instrumentationOutputFile);
@@ -123,20 +134,31 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });`);
                     for (var i=0; i<numArgs; i++){
                         argsList.push(entry.args[i]);
                     }
-
-                    var func = {name: entry.name, file: entry.file};
                     
                     // If this is the first instance of this function, pull in the arg names as well.
-                    if (!calls.containsKey(func)){
-                        calls.setValue(func, {argNames: entry.argNames, calls: []});
+                    if (!calls.containsKey(entry.name)){
+                        calls.setValue(entry.name, {file: entry.file, argNames: entry.argNames, calls: []});
                     }
-                    calls.getValue(func).calls.push({args: argsList, returnValue: exit.returnValue});
+                    calls.getValue(entry.name).calls.push({args: argsList, returnValue: exit.returnValue});
                 }
             }
         }
 
         console.log(`Read instrumentation for ${calls.size()} functions.`);
 
+        this.checkCoverage(calls, exportedFunctions);
+
         return calls;
+    }
+
+    private checkCoverage(calls: Dictionary<string, FunctionCalls>, exportedFunctions: string[]){
+        var exportedFunctionsWithNoTests = 0;
+        for (var f of exportedFunctions){
+            if (!calls.containsKey(f)){
+                console.log(`Note: ${f} has no tests, and thus will have no type signature.`);
+                exportedFunctionsWithNoTests++;
+            }
+        }
+        console.log(`${exportedFunctionsWithNoTests}/${exportedFunctions.length} have no tests.`);
     }
 }

@@ -8,11 +8,12 @@ import {SimpleTypeDeducer} from './SimpleTypeDeducer';
 export class Pipeline {
     repoUri : string;
     workingDir : string;
+    es6Enabled : boolean;
     typeDeducer : TypeDeducer = new SimpleTypeDeducer();
 
     run(){
         console.log("Starting");
-        var workspace = new Workspace(this.workingDir, this.repoUri);
+        var workspace = new Workspace(this.workingDir, this.repoUri, this.es6Enabled);
         var executions = new ExecutionTracer(workspace).trace();
         var types = this.typeDeducer.getAllTypeDefinitions(executions);
         workspace.exportTypeDefinitions(types, executions);

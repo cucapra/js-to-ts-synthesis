@@ -21,8 +21,22 @@ export class SimpleTypeDeducer extends TypeDeducer {
     }
 
     private typeOf(value: any): Type {
-        if (typeof value == 'string') {
-            return Type.STRING;
+        if (value==null){
+            return Type.NULL;
+        }
+        switch (typeof value){
+            case 'undefined':
+                return Type.UNDEFINED;
+            case 'boolean':
+                return Type.BOOLEAN;
+            case 'number':
+                return Type.NUMBER;
+            case 'string':
+                return Type.STRING;
+            case 'function':
+                return Type.FUNCTION;
+            case 'object':
+                return Type.OBJECT;
         }
         throw new Error(`Cannot convert ${typeof value}: ${value}`);
     }

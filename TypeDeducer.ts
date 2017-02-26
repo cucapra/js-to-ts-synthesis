@@ -1,6 +1,6 @@
 import {Set, Dictionary} from 'typescript-collections';
 
-import {Function, FunctionCall, FunctionCalls} from './ExecutionTracer'
+import {FunctionCall, FunctionCalls} from './ExecutionTracer'
 import {SetDictionary, ListDictionary} from './Utils';
 
 export enum Type {
@@ -19,11 +19,11 @@ export interface FunctionTypeDefinition {
 }
 
 export abstract class TypeDeducer {
-    getAllTypeDefinitions(executions: Dictionary<Function, FunctionCalls>): ListDictionary<string, FunctionTypeDefinition> {
+    getAllTypeDefinitions(executions: Dictionary<string, FunctionCalls>): ListDictionary<string, FunctionTypeDefinition> {
         var result = new ListDictionary<string, FunctionTypeDefinition>();
 
-        executions.forEach((func, funcExecutions) => {
-            result.getValue(func.file).push(this.getTypeFor(func.name, funcExecutions));
+        executions.forEach((name, funcExecutions) => {
+            result.getValue(funcExecutions.file).push(this.getTypeFor(name, funcExecutions));
         });
 
         return result;

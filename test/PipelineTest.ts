@@ -33,6 +33,15 @@ class PipelineTest {
         assert.throws(() => {pipeline.run()});
     }
 
+    @mocha.test
+    testModuleThatExportsAnObject(){
+        var pipeline = new Pipeline();
+        pipeline.repoUri = "https://github.com/lelylan/simple-oauth2";
+        pipeline.workingDir = this.tempFolder();
+        pipeline.es6Enabled = true;
+        pipeline.run();
+    }
+
     private tempFolder(): string {
         return tmp.dirSync().name;
     }
