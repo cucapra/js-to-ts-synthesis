@@ -1,45 +1,42 @@
-import {Set, Dictionary} from "typescript-collections";
+import {Type, LowerBoundType} from "./Type";
+import {FunctionCalls} from "./ExecutionTracer";
 
-import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
-import {SetDictionary, ListDictionary} from "./Utils";
-
-export enum Type {
-    NULL, UNDEFINED, BOOLEAN, NUMBER, STRING, FUNCTION, OBJECT
-}
-
-export interface ArgumentType {
+export interface ArgumentType<T extends Type> {
     name: string;
-    type: Set<Type>;
+    type: T;
 }
 
 export interface FunctionTypeDefinition {
     name: string;
-    argTypes: ArgumentType[];
-    returnValueType: Set<Type>;
+    argTypes: ArgumentType<Type>[];
+    returnValueType: Type;
 }
 
 export abstract class TypeDeducer {
-    getAllTypeDefinitions(executions: Dictionary<string, FunctionCalls>): ListDictionary<string, FunctionTypeDefinition> {
-        let result = new ListDictionary<string, FunctionTypeDefinition>();
+    getAllTypeDefinitions(executions: { [functionName: string]: FunctionCalls }): { [sourceFile: string]: FunctionTypeDefinition[] } {
+        let result: { [sourceFile: string]: FunctionTypeDefinition[] } = {};
 
-        executions.forEach((name, funcExecutions) => {
-            result.getValue(funcExecutions.file).push(this.getTypeFor(name, funcExecutions));
-        });
+        for (let functionName in executions) {
+            let file = executions[functionName].file;
+            if (!(file in result))
+                result[file] = [];
+            result[file].push(this.getTypeFor(functionName, executions[functionName]));
+        }
 
         return result;
     }
 
-    protected static initializeArgTypesArray(calls: FunctionCalls): ArgumentType[] {
+    protected static initializeArgTypesArray(calls: FunctionCalls): ArgumentType<LowerBoundType>[] {
         let numArgs = 0;
         for (let call of calls.calls){
             numArgs = Math.max(numArgs, call.args.length);
         }
 
-        let argTypes: ArgumentType[] = [];
+        let argTypes: ArgumentType<LowerBoundType>[] = [];
         for (let i = 0; i < numArgs; i++) {
             // Get the name if it's provided. Otherwise make one up.
             let name = (i < calls.argNames.length) ? calls.argNames[i] : `arg${i}`;
-            argTypes.push({name: name, type: new Set<Type>()});
+            argTypes.push({name: name, type: {kind: "restricted"}});
         }
         return argTypes;
     }

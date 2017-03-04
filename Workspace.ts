@@ -2,52 +2,29 @@ import * as process from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
-import {Set, Dictionary} from "typescript-collections";
-import {ListDictionary} from "./Utils";
-
 import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
-import {FunctionTypeDefinition, Type} from "./TypeDeducer";
-
-function typeDefinition(types: Set<Type>): string {
-    return types.toArray().map((typ) => {
-        switch (typ) {
-            case Type.NULL:
-                return "null";
-            case Type.UNDEFINED:
-                return "undefined";
-            case Type.BOOLEAN:
-                return "boolean";
-            case Type.NUMBER:
-                return "number";
-            case Type.STRING:
-                return "string";
-            case Type.FUNCTION:
-                return "(...args: any[]) => any";
-            case Type.OBJECT:
-                return "any";
-        }
-        }).join("|");
-}
+import {FunctionTypeDefinition} from "./TypeDeducer";
+import {toDefinition} from "./Type";
 
 function definitionFor(func: FunctionTypeDefinition): string {
     let args: string[] = [];
 
-    func.argTypes.forEach((arg, i) => {
-        args.push(`${arg.name}: ${typeDefinition(arg.type)}`);
+    func.argTypes.forEach(arg => {
+        args.push(`${arg.name}: ${toDefinition(arg.type)}`);
     });
 
-    return `export declare function ${func.name}(${args.join(", ")}): ${typeDefinition(func.returnValueType)};\n`;
+    return `export declare function ${func.name}(${args.join(", ")}): ${toDefinition(func.returnValueType)};\n`;
 }
 
 function validatingTestFor(func: FunctionTypeDefinition, call: FunctionCall): string {
     let test = "";
     let args: string[] = [];
     call.args.forEach((arg, i) => {
-        test += `var ${func.argTypes[i].name}: ${typeDefinition(func.argTypes[i].type)} = ${JSON.stringify(arg)};\n`;
+        test += `var ${func.argTypes[i].name}: ${toDefinition(func.argTypes[i].type)} = ${JSON.stringify(arg)};\n`;
         args.push(func.argTypes[i].name);
     });
 
-    test += `var result: ${typeDefinition(func.returnValueType)} = ${func.name}(${args.join(", ")});\n`;
+    test += `var result: ${toDefinition(func.returnValueType)} = ${func.name}(${args.join(", ")});\n`;
     return `(function (){\n${test}\n})();\n`;
 }
 
@@ -128,25 +105,25 @@ export class Workspace {
         }
     }
 
-    exportTypeDefinitions(typeDefinitions: ListDictionary<string, FunctionTypeDefinition>, executions: Dictionary<string, FunctionCalls>) {
+    exportTypeDefinitions(typeDefinitions: { [sourceFile: string]: FunctionTypeDefinition[] }, executions: { [functionName: string]: FunctionCalls }) {
         let typeTestsFile = path.join(this.testDirectory, "tests.ts");
         let typeTestsFd = fs.openSync(typeTestsFile, "w");
 
-        typeDefinitions.forEach((file, definitions) => {
+        for (let file in typeDefinitions) {
             console.log(`Exporting types for ${file}`);
 
             let definitionFileNoExt = file.substr(0, file.length - 3);
             let definitionFd = fs.openSync(definitionFileNoExt + ".d.ts", "w");
-            for (let func of definitions){
+            for (let func of typeDefinitions[file]){
                 fs.writeSync(definitionFd, definitionFor(func));
 
                 fs.writeSync(typeTestsFd, `import {${func.name}} from '${definitionFileNoExt}';\n`);
-                for (let call of executions.getValue(func.name).calls){
+                for (let call of executions[func.name].calls){
                     fs.writeSync(typeTestsFd, validatingTestFor(func, call));
                 }
             }
             fs.closeSync(definitionFd);
-        });
+        }
 
         fs.closeSync(typeTestsFd);
 
@@ -155,13 +132,13 @@ export class Workspace {
 
     private runCommand(command: string) {
         console.log(`Running command [${command}]`);
-        process.execSync(command, {cwd: this.directory, stdio: "inherit"});
+        process.execSync(command, {cwd: this.directory});
     }
 
     private runCommandWithTimeout(command: string, timeout: number): boolean {
         console.log(`Running command [${command}]`);
         try {
-            process.execSync(command, {cwd: this.directory, stdio: "inherit", timeout: timeout});
+            process.execSync(command, {cwd: this.directory, timeout: timeout});
         }
         catch (e) {
             if (e.errno === "ETIMEDOUT") {

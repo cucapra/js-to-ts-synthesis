@@ -14,6 +14,7 @@ class PipelineTest {
     }
 
     @mocha.test
+    @mocha.timeout(300000)
     testSimpleModule() {
         let pipeline  = new Pipeline();
         pipeline.repoUri = "https://github.com/IonicaBizau/abs";
@@ -24,6 +25,7 @@ class PipelineTest {
     }
 
     @mocha.test
+    @mocha.timeout(300000)
     testBadTypeDeducer() {
         let pipeline  = new Pipeline();
         pipeline.repoUri = "https://github.com/IonicaBizau/abs";
@@ -34,6 +36,7 @@ class PipelineTest {
     }
 
     @mocha.test
+    @mocha.timeout(300000)
     testModuleThatExportsAnObject() {
         let pipeline = new Pipeline();
         pipeline.repoUri = "https://github.com/lelylan/simple-oauth2";

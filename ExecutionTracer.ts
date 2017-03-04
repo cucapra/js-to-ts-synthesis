@@ -1,8 +1,6 @@
 import * as path from "path";
 import * as fs from "fs";
 
-import {Dictionary, Set, Stack} from "typescript-collections";
-
 import {Workspace} from "./Workspace";
 
 // No definition file for this one.
@@ -41,17 +39,13 @@ export interface FunctionCalls {
 }
 
 class UnbalancedEntryExitError extends Error {
-  constructor(entry: FunctionEntry, exit: FunctionExit) {
+  constructor(entry: FunctionEntry | undefined, exit: FunctionExit) {
     super("Entered " + entry + ", but exited " + exit);
   }
 }
 
 export class ExecutionTracer {
-    private static FUNCTIONS_TO_IGNORE = (function(){
-        let set = new Set<string>();
-        set.add("[Anonymous]");
-        return set;
-    })();
+    private static FUNCTIONS_TO_IGNORE = ["[Anonymous]"];
 
     private workspace: Workspace;
 
@@ -60,7 +54,7 @@ export class ExecutionTracer {
         this.workspace = workspace;
     }
 
-    trace(): Dictionary<string, FunctionCalls> {
+    trace(): { [functionName: string]: FunctionCalls } {
         let exportedFunctions = this.workspace.getExportedFunctions();
         let instrumentationOutputFile = path.join(this.workspace.directory, "instrumentation_output.txt");
 
@@ -101,9 +95,9 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });
         return this.readInstrumentationOutput(instrumentationOutputFile, exportedFunctions);
     }
 
-    private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: string[]): Dictionary<string, FunctionCalls> {
-        let calls = new Dictionary<string, FunctionCalls>();
-        let callStack = new Stack<FunctionEntry>();
+    private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: string[]): { [functionName: string]: FunctionCalls } {
+        let calls: { [filename: string]: FunctionCalls } = {};
+        let callStack = [];
 
         let lrs = new LineReaderSync(instrumentationOutputFile);
 
@@ -118,16 +112,13 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });
                 let exit = lineObj.exit;
                 let entry = callStack.pop();
 
-                if (entry.name !== exit.name || entry.file !== exit.file) {
+                if (entry === undefined || entry.name !== exit.name || entry.file !== exit.file) {
                     throw new UnbalancedEntryExitError(entry, exit);
                 }
 
-                if (!ExecutionTracer.FUNCTIONS_TO_IGNORE.contains(entry.name)) {
+                if (ExecutionTracer.FUNCTIONS_TO_IGNORE.indexOf(entry.name) === -1) {
 
-                    let numArgs = 0;
-                    for (let k in entry.args) {
-                        numArgs++;
-                    }
+                    let numArgs = Object.keys(entry.args).length;
 
                     let argsList = [];
                     for (let i = 0; i < numArgs; i++) {
@@ -135,25 +126,25 @@ var njstrace = require('njstrace').inject({ formatter: new MyFormatter() });
                     }
 
                     // If this is the first instance of this function, pull in the arg names as well.
-                    if (!calls.containsKey(entry.name)) {
-                        calls.setValue(entry.name, {file: entry.file, argNames: entry.argNames, calls: []});
+                    if (!(entry.name in calls)) {
+                        calls[entry.name] = {file: entry.file, argNames: entry.argNames, calls: []};
                     }
-                    calls.getValue(entry.name).calls.push({args: argsList, returnValue: exit.returnValue});
+                    calls[entry.name].calls.push({args: argsList, returnValue: exit.returnValue});
                 }
             }
         }
 
-        console.log(`Read instrumentation for ${calls.size()} functions.`);
+        console.log(`Read instrumentation for ${Object.keys(calls).length} functions.`);
 
         this.checkCoverage(calls, exportedFunctions);
 
         return calls;
     }
 
-    private checkCoverage(calls: Dictionary<string, FunctionCalls>, exportedFunctions: string[]) {
+    private checkCoverage(calls: { [functionName: string]: FunctionCalls }, exportedFunctions: string[]) {
         let exportedFunctionsWithNoTests = 0;
         for (let f of exportedFunctions){
-            if (!calls.containsKey(f)) {
+            if (!(f in calls)) {
                 console.log(`Note: ${f} has no tests, and thus will have no type signature.`);
                 exportedFunctionsWithNoTests++;
             }
