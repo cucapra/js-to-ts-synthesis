@@ -5,7 +5,8 @@ import * as mocha from "mocha-typescript";
 import * as tmp from "tmp";
 
 import {Pipeline} from "../Pipeline";
-import {NullTypeDeducer} from  "../NullTypeDeducer";
+
+const TEST_TIMEOUT_WINDOW = 60000;
 
 @mocha.suite
 class PipelineTest {
@@ -16,9 +17,7 @@ class PipelineTest {
     @mocha.test
     @mocha.timeout(300000)
     testSimpleModule() {
-        let pipeline  = new Pipeline();
-        pipeline.repoUri = "https://github.com/IonicaBizau/abs";
-        pipeline.workingDir = this.tempFolder();
+        let pipeline  = new Pipeline("https://github.com/IonicaBizau/abs", this.tempFolder(), false, TEST_TIMEOUT_WINDOW, "SimpleTypeDeducer");
         pipeline.run();
 
         assert.equal(fs.readFileSync(path.join(pipeline.workingDir, "lib", "index.d.ts"), "utf-8"), "export declare function abs(input: string): string;\n");
@@ -27,10 +26,7 @@ class PipelineTest {
     @mocha.test
     @mocha.timeout(300000)
     testBadTypeDeducer() {
-        let pipeline  = new Pipeline();
-        pipeline.repoUri = "https://github.com/IonicaBizau/abs";
-        pipeline.workingDir = this.tempFolder();
-        pipeline.typeDeducer = new NullTypeDeducer();
+        let pipeline  = new Pipeline("https://github.com/IonicaBizau/abs", this.tempFolder(), false, TEST_TIMEOUT_WINDOW, "NullTypeDeducer");
 
         assert.throws(() => {pipeline.run(); });
     }
@@ -38,10 +34,7 @@ class PipelineTest {
     @mocha.test
     @mocha.timeout(300000)
     testModuleThatExportsAnObject() {
-        let pipeline = new Pipeline();
-        pipeline.repoUri = "https://github.com/lelylan/simple-oauth2";
-        pipeline.workingDir = this.tempFolder();
-        pipeline.es6Enabled = true;
+        let pipeline = new Pipeline("https://github.com/lelylan/simple-oauth2", this.tempFolder(), true, TEST_TIMEOUT_WINDOW, "SimpleTypeDeducer");
         pipeline.run();
     }
 

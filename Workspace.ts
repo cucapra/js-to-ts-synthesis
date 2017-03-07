@@ -28,14 +28,13 @@ function validatingTestFor(func: FunctionTypeDefinition, call: FunctionCall): st
     return `(function (){\n${test}\n})();\n`;
 }
 
-const TEST_TIMEOUT_WINDOW = 60000;
-
 export class Workspace {
     directory: string;
     testDirectory: string;
     mainFile: string;
     es6Enabled: boolean;
-    constructor(directory: string, repoUri: string, es6Enabled: boolean) {
+    testTimeoutWindow: number;
+    constructor(directory: string, repoUri: string, es6Enabled: boolean, testTimeoutWindow: number) {
         console.log(`Working directory is ${directory}`);
         this.directory = directory;
 
@@ -70,6 +69,7 @@ export class Workspace {
         this.mainFile = path.join(directory, module.main);
 
         this.es6Enabled = es6Enabled;
+        this.testTimeoutWindow = testTimeoutWindow;
     }
 
     getExportedFunctions(): string[] {
@@ -100,8 +100,8 @@ export class Workspace {
     }
 
     runTests() {
-        if (this.runCommandWithTimeout("npm test", TEST_TIMEOUT_WINDOW)) {
-            console.log(`Tests timed out after ${TEST_TIMEOUT_WINDOW}ms. Type definitions may be incomplete.`);
+        if (this.runCommandWithTimeout("npm test", this.testTimeoutWindow)) {
+            console.log(`Tests timed out after ${this.testTimeoutWindow}ms. Type definitions may be incomplete.`);
         }
     }
 

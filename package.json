@@ -7,6 +7,9 @@
     "build": "tsc && tslint --fix *.ts test/*.ts",
     "test": "mocha test"
   },
+  "bin": {
+    "pipeline": "bin/ts-pipeline.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cucapra/js-to-ts-synthesis.git"
