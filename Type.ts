@@ -19,36 +19,40 @@ export function toStringSet(...arr: string[]): StringSet {
     return set;
 }
 
-export interface AnyType {
-    kind: "any";
-}
-
-export interface RestrictedType {
-    kind: "restricted";
-    nullType?: true;
-    undefinedType?: true;
-    booleanTrueType?: true;
-    booleanFalseType?: true;
-    numberType?: true | NumberSet;
-    stringType?: true | StringSet;
-    functionType?: true;
-    arrayOrTupleType?: {kind: "array", type: Type} | {kind: "tuple", type: Type[]};
-    objectType?: true | Map<Type>;
-}
-
-export type Type = AnyType | RestrictedType;
+export type Type = "top" | {
+    nullType: boolean;
+    undefinedType: boolean;
+    booleanType: {true: boolean, false: boolean};
+    numberType: true | NumberSet;
+    stringType: true | StringSet;
+    functionType: boolean;
+    arrayOrTupleType: {kind: "array", type: Type} | {kind: "tuple", type: Type[]} | false;
+    objectType: /*NotEmpty*/ Map<Type> | false;
+};
 
 export interface LowerBoundType {
-    kind: "restricted";
-    nullType?: true;
-    undefinedType?: true;
-    booleanTrueType?: true;
-    booleanFalseType?: true;
-    numberType?: NumberSet;
-    stringType?: StringSet;
-    functionType?: true;
-    arrayOrTupleType?: {kind: "tuple", type: LowerBoundType[]};
-    objectType?: Map<LowerBoundType>;
+    nullType: boolean;
+    undefinedType: boolean;
+    booleanType: {true: boolean, false: boolean};
+    numberType: NumberSet;
+    stringType: StringSet;
+    functionType: boolean;
+    arrayOrTupleType: {kind: "tuple", type: LowerBoundType[]} | false;
+    objectType: /*NotEmpty*/ Map<LowerBoundType> | false;
+}
+
+// Convenience method. Gets the bottom type (nothing can be assigned to this)
+export function bottom(): LowerBoundType {
+    return {
+        nullType: false,
+        undefinedType: false,
+        booleanType: {true: false, false: false},
+        numberType: {},
+        stringType: {},
+        functionType: false,
+        arrayOrTupleType: false,
+        objectType: false
+    };
 }
 
 function toString(value: any): string {
@@ -56,44 +60,50 @@ function toString(value: any): string {
 }
 
 export function toDefinition(type: Type): string {
-    if (type.kind === "any")
-        return "any";
+    if (type === "top") {
+        return "{}";
+    }
 
     let pieces: string[] = [];
-    if (type.nullType !== undefined)
+    if (type.nullType)
         pieces.push("null");
 
-    if (type.undefinedType !== undefined)
+    if (type.undefinedType)
         pieces.push("undefined");
 
-    if (type.booleanTrueType !== undefined) {
-        if (type.booleanFalseType !== undefined)
+    if (type.booleanType.true) {
+        if (type.booleanType.false)
             pieces.push("boolean");
         else
             pieces.push("true");
     }
-    else if (type.booleanFalseType !== undefined) {
+    else if (type.booleanType.false) {
         pieces.push("false");
     }
 
-    if (type.numberType !== undefined) {
-        if (type.numberType === true)
-            pieces.push("number");
-        else
-            pieces.push(Object.keys(type.numberType).map(toString).join("|"));
+    if (type.numberType === true) {
+        pieces.push("number");
+    }
+    else {
+        let values = Object.keys(type.numberType).map(toString);
+        if (values.length > 0)
+            pieces.push(values.join("|"));
     }
 
-    if (type.stringType !== undefined) {
-        if (type.stringType === true)
-            pieces.push("string");
-        else
-            pieces.push(Object.keys(type.stringType).map(toString).join("|"));
+
+    if (type.stringType === true) {
+        pieces.push("string");
+    }
+    else {
+        let values = Object.keys(type.stringType).map(toString);
+        if (values.length > 0)
+            pieces.push(values.join("|"));
     }
 
-    if (type.functionType !== undefined)
+    if (type.functionType)
         pieces.push("(...args: any[]) => any");
 
-    if (type.arrayOrTupleType !== undefined) {
+    if (type.arrayOrTupleType) {
         switch (type.arrayOrTupleType.kind) {
             case "tuple":
                 pieces.push("[" + type.arrayOrTupleType.type.map(toDefinition).join(", ") + "]");
@@ -104,14 +114,9 @@ export function toDefinition(type: Type): string {
         }
     }
 
-    if (type.objectType !== undefined) {
-        if (type.objectType === true) {
-            pieces.push("any");
-        }
-        else {
-            let d = type.objectType;
-            pieces.push("{" + Object.keys(d).map(k => `${k}: ${toDefinition(d[k])}`).join(", ") + "}");
-        }
+    if (type.objectType) {
+        let d = type.objectType;
+        pieces.push("{" + Object.keys(d).map(k => `${k}: ${toDefinition(d[k])}`).join(", ") + "}");
     }
 
     return pieces.join("|");

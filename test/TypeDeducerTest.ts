@@ -2,7 +2,14 @@ import * as mocha from "mocha-typescript";
 import {assert} from "chai";
 import {SimpleTypeDeducer} from  "../SimpleTypeDeducer";
 import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
-import {toNumberSet, toStringSet} from "../Type";
+import {toNumberSet, toStringSet, Type, bottom} from "../Type";
+
+let assign = require("object.assign");
+
+// Makes tests shorter.
+function t(d: {}): Type {
+    return assign(bottom(), d);
+}
 
 @mocha.suite
 class TypeDeducerTest {
@@ -21,12 +28,12 @@ class TypeDeducerTest {
                 {
                     name: "f",
                     argTypes: [
-                        {name: "x", type: {kind: "restricted", numberType: true}},
-                        {name: "y", type: {kind: "restricted", stringType: true}},
-                        {name: "z", type: {kind: "restricted", arrayOrTupleType: {kind: "array", type: {kind: "restricted", numberType: true}}}},
-                        {name: "w", type: {kind: "restricted", objectType: true}}
+                        {name: "x", type: t({numberType: true})},
+                        {name: "y", type: t({stringType: true})},
+                        {name: "z", type: t({arrayOrTupleType: {kind: "array", type: t({numberType: true})}})},
+                        {name: "w", type: "top"}
                     ],
-                    returnValueType: {kind: "restricted", undefinedType: true}
+                    returnValueType: t({undefinedType: true})
                 }
             ]
         });
@@ -46,17 +53,17 @@ class TypeDeducerTest {
                 {
                     name: "f",
                     argTypes: [
-                        {name: "x", type: {kind: "restricted", numberType: toNumberSet(42)}},
-                        {name: "y", type: {kind: "restricted", stringType: toStringSet("foo")}},
-                        {name: "z", type: {kind: "restricted", arrayOrTupleType: {kind: "tuple", type: [
-                            {kind: "restricted", numberType: toNumberSet(1)},
-                            {kind: "restricted", numberType: toNumberSet(2)}
-                        ]}}},
-                        {name: "w", type: {kind: "restricted", objectType: {
-                            foo: {kind: "restricted", stringType: toStringSet("bar")}
-                        }}}
+                        {name: "x", type: t({numberType: toNumberSet(42)})},
+                        {name: "y", type: t({stringType: toStringSet("foo")})},
+                        {name: "z", type: t({arrayOrTupleType: {kind: "tuple", type: [
+                            t({numberType: toNumberSet(1)}),
+                            t({numberType: toNumberSet(2)})
+                        ]}})},
+                        {name: "w", type: t({objectType: {
+                            foo: t({stringType: toStringSet("bar")})
+                        }})}
                     ],
-                    returnValueType: {kind: "restricted", undefinedType: true}
+                    returnValueType: t({undefinedType: true})
                 }
             ]
         });

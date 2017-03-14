@@ -1,81 +1,73 @@
 import {FunctionCalls} from "./ExecutionTracer";
 import {TypeDeducer, FunctionTypeDefinition} from "./TypeDeducer";
-import {LowerBoundType, Map, StringSet} from "./Type";
+import {LowerBoundType, Map, StringSet, bottom} from "./Type";
 
 export class LowerBoundTypeDeducer extends TypeDeducer {
     getTypeFor(name: string, calls: FunctionCalls): FunctionTypeDefinition {
         let argTypes = TypeDeducer.initializeArgTypesArray(calls);
-        let returnValueType: LowerBoundType = {kind: "restricted"};
+        let returnValueType = bottom();
         for (let call of calls.calls){
             call.args.forEach((arg, i) => {
-                this.extend(argTypes[i].type, arg);
+                argTypes[i].type = this.extend(argTypes[i].type, arg);
             });
 
-            this.extend(returnValueType, call.returnValue);
+            returnValueType = this.extend(returnValueType, call.returnValue);
         }
 
         return {name: name, argTypes: argTypes, returnValueType: returnValueType};
     }
 
-    private extend(type: LowerBoundType, value: any) {
-        if (type.kind === "restricted") {
-            if (value === null) {
-                type.nullType = true;
-            }
-            switch (typeof value) {
-                case "undefined":
-                    type.undefinedType = true;
-                    break;
-                case "boolean":
-                    if (value)
-                        type.booleanTrueType = true;
-                    else
-                        type.booleanFalseType = true;
-                    break;
-                case "number":
-                    if (type.numberType === undefined)
-                        type.numberType = {};
-                    type.numberType[value] = true;
-                    break;
-                case "string":
-                    if (type.stringType === undefined)
-                        type.stringType = {};
-                    type.stringType[value] = true;
-                    break;
-                case "function":
-                    type.functionType = true;
-                    break;
-                case "object":
-                    if (Array.isArray(value)) {
-                        if (type.arrayOrTupleType === undefined) {
-                            let tupleType = value.map(arg => {
-                                let argType: LowerBoundType = {kind: "restricted"};
-                                this.extend(argType, arg);
-                                return argType;
-                            });
-                            type.arrayOrTupleType = {kind: "tuple", type: tupleType};
-                        }
-                        else {
-                            this.mergeIntoTupleLowerBound(type.arrayOrTupleType.type, value);
-                        }
+    private extend(type: LowerBoundType, value: any): LowerBoundType {
+        if (value === null) {
+            type.nullType = true;
+            return type;
+        }
+        switch (typeof value) {
+            case "undefined":
+                type.undefinedType = true;
+                return type;
+            case "boolean":
+                if (value)
+                    type.booleanType.true = true;
+                else
+                    type.booleanType.false = true;
+                return type;
+            case "number":
+                type.numberType[value] = true;
+                return type;
+            case "string":
+                type.stringType[value] = true;
+                return type;
+            case "function":
+                type.functionType = true;
+                return type;
+            case "object":
+                if (Array.isArray(value)) {
+                    if (!type.arrayOrTupleType) {
+                        let tupleType = value.map(arg => this.extend(bottom(), arg) );
+                        type.arrayOrTupleType = {kind: "tuple", type: tupleType};
+                        return type;
                     }
                     else {
-                        if (type.objectType === undefined) {
-                            type.objectType = {};
-                            for (let k in value) {
-                                let kType: LowerBoundType = {kind: "restricted"};
-                                this.extend(kType, value[k]);
-                                type.objectType[k] = kType;
-                            }
-                        }
-                        else {
-                            this.mergeIntoObjectLowerBound(type.objectType, value);
-                        }
+                        this.mergeIntoTupleLowerBound(type.arrayOrTupleType.type, value);
+                        return type;
                     }
-                    break;
-                default:
-                    throw new Error(`Cannot convert ${typeof value}: ${value}`);
-            }
+                }
+                else {
+                    if (!type.objectType) {
+                        type.objectType = {};
+                        for (let k in value) {
+                            type.objectType[k] = this.extend(bottom(), value[k]);
+                        }
+                        return type;
+                    }
+                    else {
+                        this.mergeIntoObjectLowerBound(type.objectType, value);
+                        return type;
+                    }
+                }
+            default:
+                throw new Error(`Cannot convert ${typeof value}: ${value}`);
         }
     }
 
@@ -84,7 +76,9 @@ export class LowerBoundTypeDeducer extends TypeDeducer {
         for (let i = 0; i < numEntries; i++) {
             if (i < target.length) {
                 // `source` has this, which means it's optional.
-                target.push({kind: "restricted", undefinedType: true});
+                let type = bottom();
+                type.undefinedType = true;
+                target.push(type);
                 this.extend(target[i], source[i]);
             }
             else if (i < source.length) {
@@ -109,7 +103,9 @@ export class LowerBoundTypeDeducer extends TypeDeducer {
         for (let k of Object.keys(keys)) {
             if (!(k in target)) {
                 // `source` has this, which means it's optional.
-                target[k] = {kind: "restricted", undefinedType: true};
+                let type = bottom();
+                type.undefinedType = true;
+                target[k] = type;
                 this.extend(target[k], source[k]);
             }
             else if (!(k in source)) {

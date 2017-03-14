@@ -1,4 +1,4 @@
-import {Type, LowerBoundType} from "./Type";
+import {Type, LowerBoundType, bottom} from "./Type";
 import {FunctionCalls} from "./ExecutionTracer";
 
 export interface ArgumentType<T extends Type> {
@@ -36,7 +36,7 @@ export abstract class TypeDeducer {
         for (let i = 0; i < numArgs; i++) {
             // Get the name if it's provided. Otherwise make one up.
             let name = (i < calls.argNames.length) ? calls.argNames[i] : `arg${i}`;
-            argTypes.push({name: name, type: {kind: "restricted"}});
+            argTypes.push({name: name, type: bottom()});
         }
         return argTypes;
     }
