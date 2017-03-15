@@ -35,7 +35,7 @@ export abstract class TypeDeducer {
         let argTypes: ArgumentType<LowerBoundType>[] = [];
         for (let i = 0; i < numArgs; i++) {
             // Get the name if it's provided. Otherwise make one up.
-            let name = (i < calls.argNames.length) ? calls.argNames[i] : `arg${i}`;
+            let name = (i < calls.argDefs.length) ? calls.argDefs[i].name : `arg${i}`;
             argTypes.push({name: name, type: bottom()});
         }
         return argTypes;

@@ -10,6 +10,7 @@ let LineReaderSync = require("line-reader-sync");
 let Aran = require("aran");
 let js_beautify = require("js-beautify").js_beautify;
 
+
 let INSTRUMENTATION_CODE = fs.readFileSync(path.join(__dirname, "instrumentation", "hooks.js"), "utf-8");
 
 export interface FunctionCall {
@@ -17,9 +18,14 @@ export interface FunctionCall {
     returnValue: any;
 }
 
+export interface ArgDef {
+    name: string;
+    typeofChecks: {"===": string[], "!==": string[]};
+}
+
 export interface FunctionCalls {
     file: string; // The file where the function is defined.
-    argNames: string[];
+    argDefs: ArgDef[];
     calls: FunctionCall[];
 }
 
@@ -40,16 +46,17 @@ export class ExecutionTracer {
     trace(): { [functionName: string]: FunctionCalls } {
         let exportedFunctions = this.workspace.getExportedFunctions();
         let instrumentationOutputFile = path.join(this.workspace.directory, "instrumentation_output.txt");
-        let testDirectory = this.workspace.testDirectory;
 
         // Add some code to trace function inputs and outputs.
         this.injectInstrumentation(this.workspace.mainFile);
 
-        for (let testFile of fs.readdirSync(testDirectory)) {
-            testFile = path.join(testDirectory, testFile);
+        for (let testFile of this.workspace.testFiles) {
             if (path.extname(testFile) === ".js")
                 this.injectInstrumentation(testFile, {instrumentationOutputFile: instrumentationOutputFile, exportedFunctions: exportedFunctions});
         }
+
+        // Disable linter. These warnings aren't meaningful for instrumented code.
+        this.disableLinter();
 
         this.workspace.runTests();
         return this.readInstrumentationOutput(instrumentationOutputFile, exportedFunctions);
@@ -74,12 +81,11 @@ ${source}
 `;
         }
 
-        // Disable linter. These warnings aren't meaningful for instrumented code.
-        source = `
-/* eslint-disable */
-${source}`;
-
         fs.writeFileSync(sourceFile, source);
+    }
+
+    private disableLinter() {
+        fs.appendFileSync(path.join(this.workspace.directory, ".eslintignore"), "\n**/*.js");
     }
 
     private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: string[]): { [functionName: string]: FunctionCalls } {
@@ -96,7 +102,7 @@ ${source}`;
                 case "FunctionCall":
                     // If this is the first instance of this function, pull in the arg names as well.
                     if (!(lineObj.name in calls)) {
-                        calls[lineObj.name] = {file: lineObj.file, argNames: lineObj.argNames, calls: []};
+                        calls[lineObj.name] = {file: lineObj.file, argDefs: lineObj.argDefs, calls: []};
                     }
                     calls[lineObj.name].calls.push({args: lineObj.args, returnValue: lineObj.returnValue});
                     break;

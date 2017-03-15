@@ -3,12 +3,17 @@ import {assert} from "chai";
 import {SimpleTypeDeducer} from  "../SimpleTypeDeducer";
 import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
 import {toNumberSet, toStringSet, Type, bottom} from "../Type";
+import {ArgDef} from "../ExecutionTracer";
 
 let assign = require("object.assign");
 
 // Makes tests shorter.
 function t(d: {}): Type {
     return assign(bottom(), d);
+}
+
+function a(a: string): ArgDef {
+    return {name: a, typeofChecks: {"===": [], "!==": []}};
 }
 
 @mocha.suite
@@ -18,7 +23,7 @@ class TypeDeducerTest {
     testSimpleTypeDeducer() {
         let typeDeducer = new SimpleTypeDeducer();
         let calls = {
-            f: {file: "sample.js", argNames: ["x", "y", "z", "w"], calls: [
+            f: {file: "sample.js", argDefs: [a("x"), a("y"), a("z"), a("w")], calls: [
                 {args: [42, "foo", [1, 2], {foo: "bar"}], returnValue: undefined}
             ]}
         };
@@ -43,7 +48,7 @@ class TypeDeducerTest {
     testLowerBoundTypeDeducer() {
         let typeDeducer = new LowerBoundTypeDeducer();
         let calls = {
-            f: {file: "sample.js", argNames: ["x", "y", "z", "w"], calls: [
+            f: {file: "sample.js", argDefs: [a("x"), a("y"), a("z"), a("w")], calls: [
                 {args: [42, "foo", [1, 2], {foo: "bar"}], returnValue: undefined}
             ]}
         };

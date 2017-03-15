@@ -1,4 +1,4 @@
-import * as process from "child_process";
+import * as child_process from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -28,14 +28,26 @@ function validatingTestFor(func: FunctionTypeDefinition, call: FunctionCall): st
     return `(function (){\n${test}\n})();\n`;
 }
 
+function testDirectory(dir: string): string[] | undefined {
+    return fs.existsSync(dir) ? fs.readdirSync(dir).map(file => path.join(dir, file)) : undefined;
+}
+
+function testFile(file: string): string[] | undefined {
+    return fs.existsSync(file) ? [file] : undefined;
+}
+
 export class Workspace {
     directory: string;
-    testDirectory: string;
+    testFiles: string[];
     mainFile: string;
     testTimeoutWindow: number;
     constructor(directory: string, repoUri: string, testTimeoutWindow: number) {
         console.log(`Working directory is ${directory}`);
         this.directory = directory;
+
+        // Needed so that instrumented libraries can find the instrumentation code.
+        process.env.INSTRUMENTATION_SRC = path.join(__dirname, "instrumentation");
+        console.log(`INSTRUMENTATION_SRC=${process.env.INSTRUMENTATION_SRC}`);
 
         // Clone from the repo.
         this.runCommand(`git clone ${repoUri} .`);
@@ -46,20 +58,14 @@ export class Workspace {
         // Install tools for the execution tracer.
         this.runCommand("npm install babel-preset-env esprima");
 
-        let testDirectory = null;
-        for (let testDir of ["test", "tests"]) {
-            if (fs.existsSync(path.join(directory, testDir))) {
-                testDirectory = path.join(directory, testDir);
-            }
-        }
-
-        if (testDirectory == null) {
-            throw Error("Cannot find test directory");
-        }
-        this.testDirectory = testDirectory;
+        let testFiles = testDirectory(path.join(directory, "test")) || testDirectory(path.join(directory, "tests ")) || testFile(path.join(directory, "test.js"));
+        if (testFiles !== undefined)
+            this.testFiles = testFiles;
+        else
+             throw Error("Cannot find test directory");
 
         let module = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf-8"));
-        this.mainFile = path.join(directory, module.main);
+        this.mainFile = path.join(directory, module.main || module.files[0]);
 
         this.testTimeoutWindow = testTimeoutWindow;
     }
@@ -98,7 +104,7 @@ export class Workspace {
     }
 
     exportTypeDefinitions(typeDefinitions: { [sourceFile: string]: FunctionTypeDefinition[] }, executions: { [functionName: string]: FunctionCalls }) {
-        let typeTestsFile = path.join(this.testDirectory, "tests.ts");
+        let typeTestsFile = path.join(this.directory, "tests.ts");
         let typeTestsFd = fs.openSync(typeTestsFile, "w");
 
         for (let file in typeDefinitions) {
@@ -124,13 +130,13 @@ export class Workspace {
 
     private runCommand(command: string) {
         console.log(`Running command [${command}]`);
-        process.execSync(command, {cwd: this.directory});
+        child_process.execSync(command, {cwd: this.directory});
     }
 
     private runCommandWithTimeout(command: string, timeout: number): boolean {
         console.log(`Running command [${command}]`);
         try {
-            process.execSync(command, {cwd: this.directory, timeout: timeout});
+            child_process.execSync(command, {cwd: this.directory, timeout: timeout});
         }
         catch (e) {
             if (e.errno === "ETIMEDOUT") {
