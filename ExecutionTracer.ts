@@ -3,7 +3,7 @@ import * as fs from "fs";
 import { transformFileSync } from "babel-core";
 
 import {Workspace} from "./Workspace";
-import {FunctionEntry, FunctionExit, InstrumentationLine} from "./instrumentation/hooks";
+import * as hooks from "./instrumentation/hooks";
 
 // No definition file for this one.
 let LineReaderSync = require("line-reader-sync");
@@ -24,8 +24,8 @@ export interface FunctionCalls {
 }
 
 class UnbalancedEntryExitError extends Error {
-  constructor(entry: FunctionEntry | undefined, exit: FunctionExit) {
-    super("Entered " + entry + ", but exited " + exit);
+  constructor(details: hooks.UnbalancedEntryExit) {
+    super(`Unbalanced entry/exit: ${details}`);
   }
 }
 
@@ -84,37 +84,24 @@ ${source}`;
 
     private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: string[]): { [functionName: string]: FunctionCalls } {
         let calls: { [filename: string]: FunctionCalls } = {};
-        let callStack: FunctionEntry[] = [];
 
         let lrs = new LineReaderSync(instrumentationOutputFile);
 
         while (true) {
             let line = lrs.readline();
             if (line == null) break;
-            let lineObj = <InstrumentationLine>JSON.parse(line);
-            if (lineObj.type === "entry") {
-                callStack.push(lineObj);
-            }
-            else {
-                let exit = lineObj;
-                let entry = callStack.pop();
+            let lineObj = <hooks.InstrumentationLine>JSON.parse(line);
 
-                if (entry === undefined || entry.name !== exit.name || entry.file !== exit.file) {
-                    throw new UnbalancedEntryExitError(entry, exit);
-                }
-
-                let numArgs = Object.keys(entry.args).length;
-
-                let argsList = [];
-                for (let i = 0; i < numArgs; i++) {
-                    argsList.push(entry.args[i]);
-                }
-
-                // If this is the first instance of this function, pull in the arg names as well.
-                if (!(entry.name in calls)) {
-                    calls[entry.name] = {file: entry.file, argNames: entry.argNames, calls: []};
-                }
-                calls[entry.name].calls.push({args: argsList, returnValue: exit.returnValue});
+            switch (lineObj.type) {
+                case "FunctionCall":
+                    // If this is the first instance of this function, pull in the arg names as well.
+                    if (!(lineObj.name in calls)) {
+                        calls[lineObj.name] = {file: lineObj.file, argNames: lineObj.argNames, calls: []};
+                    }
+                    calls[lineObj.name].calls.push({args: lineObj.args, returnValue: lineObj.returnValue});
+                    break;
+                case "UnbalancedEntryExit":
+                    throw new UnbalancedEntryExitError(lineObj);
             }
         }
 
@@ -133,6 +120,7 @@ ${source}`;
                 exportedFunctionsWithNoTests++;
             }
         }
-        console.log(`${exportedFunctionsWithNoTests}/${exportedFunctions.length} have no tests.`);
+        if (exportedFunctionsWithNoTests > 0)
+            console.log(`${exportedFunctionsWithNoTests}/${exportedFunctions.length} have no tests.`);
     }
 }
