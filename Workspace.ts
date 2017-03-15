@@ -32,9 +32,8 @@ export class Workspace {
     directory: string;
     testDirectory: string;
     mainFile: string;
-    es6Enabled: boolean;
     testTimeoutWindow: number;
-    constructor(directory: string, repoUri: string, es6Enabled: boolean, testTimeoutWindow: number) {
+    constructor(directory: string, repoUri: string, testTimeoutWindow: number) {
         console.log(`Working directory is ${directory}`);
         this.directory = directory;
 
@@ -44,14 +43,8 @@ export class Workspace {
         // Install dependencies.
         this.runCommand("npm install");
 
-        // Install the tracer.
-        this.runCommand("npm install https://github.com/cucapra/njsTrace");
-
-        // Install the translator. njsTrace only works for ES5 code.
-        if (es6Enabled) {
-            this.runCommand("npm install babel-register babel-preset-env");
-            fs.writeFileSync(path.join(directory, ".babelrc"), "{\"presets\": [\"env\"]}");
-        }
+        // Install tools for the execution tracer.
+        this.runCommand("npm install babel-preset-env esprima");
 
         let testDirectory = null;
         for (let testDir of ["test", "tests"]) {
@@ -68,7 +61,6 @@ export class Workspace {
         let module = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf-8"));
         this.mainFile = path.join(directory, module.main);
 
-        this.es6Enabled = es6Enabled;
         this.testTimeoutWindow = testTimeoutWindow;
     }
 

@@ -16,21 +16,19 @@ const TYPE_DEDUCERS_BY_NAME: {[name: string]: () => TypeDeducer} = {
 export class Pipeline {
     readonly repoUri: string;
     readonly workingDir: string;
-    readonly es6Enabled: boolean;
     readonly testTimeoutWindow: number;
     readonly typeDeducer: TypeDeducer;
 
-    constructor(repoUri: string, workingDir: string, es6Enabled: boolean, testTimeoutWindow: number, typeDeducer: string) {
+    constructor(repoUri: string, workingDir: string,  testTimeoutWindow: number, typeDeducer: string) {
         this.repoUri = repoUri;
         this.workingDir = workingDir;
-        this.es6Enabled = es6Enabled;
         this.testTimeoutWindow = testTimeoutWindow;
         this.typeDeducer = TYPE_DEDUCERS_BY_NAME[typeDeducer]();
     }
 
     run() {
         console.log("Starting");
-        let workspace = new Workspace(this.workingDir, this.repoUri, this.es6Enabled, this.testTimeoutWindow);
+        let workspace = new Workspace(this.workingDir, this.repoUri, this.testTimeoutWindow);
         let executions = new ExecutionTracer(workspace).trace();
         let types = this.typeDeducer.getAllTypeDefinitions(executions);
         workspace.exportTypeDefinitions(types, executions);
@@ -47,10 +45,6 @@ export function main() {
             describe: "Working directory (must be empty).",
             demandOption: true
         })
-        .option("es6Enabled", {
-            describe: "Whether the type deducer should run in ES6-enabled mode (babel will be loaded at runtime).",
-            default: false
-        })
         .option("testTimeoutWindow", {
             describe: "The maximum time (ms) for which the test suite is run. If the test suite timed out, types are still collected, but may be incomplete.",
             default: 60000
@@ -62,6 +56,6 @@ export function main() {
         })
         .help()
         .argv;
-    let pipeline = new Pipeline(args["repo"], args["dir"], args["es6Enabled"], args["testTimeoutWindow"], args["typeDeducer"]);
+    let pipeline = new Pipeline(args["repo"], args["dir"], args["testTimeoutWindow"], args["typeDeducer"]);
     pipeline.run();
 }
