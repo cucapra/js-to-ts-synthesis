@@ -19,7 +19,7 @@ export function toStringSet(...arr: string[]): StringSet {
     return set;
 }
 
-export type Type = "top" | {
+export interface Type {
     nullType: boolean;
     undefinedType: boolean;
     booleanType: {true: boolean, false: boolean};
@@ -27,7 +27,7 @@ export type Type = "top" | {
     stringType: true | StringSet;
     functionType: boolean;
     arrayOrTupleType: {kind: "array", type: Type} | {kind: "tuple", type: Type[]} | false;
-    objectType: /*NotEmpty*/ Map<Type> | false;
+    objectType: Map<Type> | false;
 };
 
 export interface LowerBoundType {
@@ -38,7 +38,7 @@ export interface LowerBoundType {
     stringType: StringSet;
     functionType: boolean;
     arrayOrTupleType: {kind: "tuple", type: LowerBoundType[]} | false;
-    objectType: /*NotEmpty*/ Map<LowerBoundType> | false;
+    objectType: Map<LowerBoundType> | false;
 }
 
 // Convenience method. Gets the bottom type (nothing can be assigned to this)
@@ -60,9 +60,9 @@ function toString(value: any): string {
 }
 
 export function toDefinition(type: Type): string {
-    if (type === "top") {
+    /*if (type === "top") {
         return "{}";
-    }
+    }*/
 
     let pieces: string[] = [];
     if (type.nullType)

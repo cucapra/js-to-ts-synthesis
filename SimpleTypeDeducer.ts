@@ -21,10 +21,6 @@ export class SimpleTypeDeducer extends TypeDeducer {
     }
 
     private extend(type: Type, value: any): Type {
-        if (type === "top") {
-            return type;
-        }
-
         if (value === null) {
             type.nullType = true;
             return type;
@@ -55,7 +51,7 @@ export class SimpleTypeDeducer extends TypeDeducer {
                     return type;
                 }
                 else {
-                    return "top";
+                    return type/*"top"*/;
                 }
                 default:
                     throw new Error(`Cannot convert ${typeof value}: ${value}`);

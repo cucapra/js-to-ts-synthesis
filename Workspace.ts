@@ -5,6 +5,11 @@ import * as path from "path";
 import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
 import {FunctionTypeDefinition} from "./TypeDeducer";
 import {toDefinition} from "./Type";
+import {argDefs, ArgDef} from "./instrumentation/Static";
+
+export interface ExportedFunctions {
+    [name: string]: ArgDef[];
+}
 
 function definitionFor(func: FunctionTypeDefinition): string {
     let args: string[] = [];
@@ -70,11 +75,9 @@ export class Workspace {
         this.testTimeoutWindow = testTimeoutWindow;
     }
 
-    getExportedFunctions(): string[] {
-        let exportedFunctions: string[] = [];
+    getExportedFunctions(): ExportedFunctions {
+        let exportedFunctions: {[name: string]: ArgDef[]} = {};
         let maxDepth = 10;
-
-        JSON.stringify(require(this.mainFile));
 
         function listExportedFunctions(target: any, path: string[]) {
             if (path.length < maxDepth) {
@@ -83,7 +86,7 @@ export class Workspace {
                         // A function at the top level won't have a path. Lookup its name.
                         // Otherwise, pull the name as the property of the object where it
                         // is defined.
-                        exportedFunctions.push(path.length > 0 ? path.join(".") : target.name);
+                        exportedFunctions[path.length > 0 ? path.join(".") : target.name] = argDefs(target);
                     case "object":
                         for (let key in target) {
                             listExportedFunctions(target[key], path.concat([key]));

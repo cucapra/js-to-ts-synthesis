@@ -1,8 +1,7 @@
-import * as assert from "assert";
+import {assert} from "chai";
 import * as mocha from "mocha-typescript";
-import * as esprima from "esprima";
 
-import {typeofChecks} from "../instrumentation/Static";
+import {argDefs} from "../instrumentation/Static";
 
 @mocha.suite
 class StaticTest {
@@ -14,10 +13,6 @@ class StaticTest {
                 throw new TypeError("name must be a string");
             }
         };
-        let ast = esprima.parse(f.toString()).body[0];
-
-        if (ast.type !== "FunctionDeclaration")
-            throw new Error(`Wrong type: ${ast.type} not FunctionDeclaration`);
-        assert.deepEqual(typeofChecks(ast), {name: {"===": [], "!==": ["string"]}});
+        assert.deepEqual(argDefs(f), [{name: "name", typeofChecks: {"===": [], "!==": ["string"]}}]);
     }
 }

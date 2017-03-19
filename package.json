@@ -22,6 +22,7 @@
   "homepage": "https://github.com/cucapra/js-to-ts-synthesis#readme",
   "dependencies": {
     "acorn": "^4.0.11",
+    "immutable": "^3.8.1",
     "js-beautify": "^1.6.11",
     "line-reader-sync": "^0.1.0",
     "yargs": "^6.6.0"

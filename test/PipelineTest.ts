@@ -17,11 +17,13 @@ class PipelineTest {
     @mocha.test
     @mocha.timeout(300000)
     testSimpleModule() {
-        let pipeline  = new Pipeline("https://github.com/IonicaBizau/abs", this.tempFolder(), TEST_TIMEOUT_WINDOW, "SimpleTypeDeducer");
+        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse", this.tempFolder(), TEST_TIMEOUT_WINDOW, "SimpleTypeDeducer");
         pipeline.run();
 
-        assert.equal(fs.readFileSync(path.join(pipeline.workingDir, "lib", "index.d.ts"), "utf-8"), "export declare function abs(input: string): string;\n");
+        assert.equal(fs.readFileSync(path.join(pipeline.workingDir, "lib", "index.d.ts"), "utf-8"), "export declare function gitUrlParse(url: string): {};\n");
     }
+
+    /*
 
     @mocha.test
     @mocha.timeout(300000)
@@ -36,7 +38,7 @@ class PipelineTest {
     testModuleThatExportsAnObject() {
         let pipeline = new Pipeline("https://github.com/lelylan/simple-oauth2", this.tempFolder(), TEST_TIMEOUT_WINDOW, "SimpleTypeDeducer");
         pipeline.run();
-    }
+    }*/
 
     private tempFolder(): string {
         return tmp.dirSync().name;

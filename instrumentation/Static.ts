@@ -1,15 +1,19 @@
-import {FunctionDeclaration} from "estree";
+import * as esprima from "esprima";
+import {FunctionExpression} from "estree";
 
-export type TypeofChecks = {[name: string]: {"===": string[], "!==": string[]}};
+export interface ArgDef {
+    name: string;
+    typeofChecks: {"===": string[], "!==": string[]};
+}
 
-export function typeofChecks(node: FunctionDeclaration): TypeofChecks {
+function typeofChecks(node: FunctionExpression): {[name: string]: {"===": string[], "!==": string[]}} {
 
     // This is pretty restrictive for now.
     // Assumptions:
     // 1) typeof checks always occur at the top of the function.
     // 2) typeof checks on the argument itself, not any aliases
 
-    let result: TypeofChecks = {};
+    let result: {[name: string]: {"===": string[], "!==": string[]}} = {};
 
     for (let s of node.body.body){
         if (s.type !== "IfStatement")
@@ -31,4 +35,22 @@ export function typeofChecks(node: FunctionDeclaration): TypeofChecks {
     }
 
     return result;
+}
+
+export function argDefs(fct: Function): ArgDef[] {
+    let node = esprima.parse(`(${fct.toString()})`).body[0];
+    if (node.type !== "ExpressionStatement")
+        throw new Error(`Top-level node ${node.type} not ExpressionStatement`);
+    if (node.expression.type !== "FunctionExpression")
+        throw new Error(`Expression node ${node.expression.type} not FunctionExpression`);
+
+    let argDefs: ArgDef[] = [];
+    let typeofChecksByParam = typeofChecks(node.expression);
+
+    for (let param of node.expression.params){
+        if (param.type === "Identifier")
+            argDefs.push({name: param.name, typeofChecks: typeofChecksByParam[param.name] || {"===": [], "!==": []}});
+    }
+
+    return argDefs;
 }
