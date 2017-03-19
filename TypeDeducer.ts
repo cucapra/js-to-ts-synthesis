@@ -1,4 +1,4 @@
-import {Type, LowerBoundType, bottom} from "./Type";
+import {Type} from "./Type";
 import {FunctionCalls} from "./ExecutionTracer";
 
 export interface ArgumentType<T extends Type> {
@@ -26,17 +26,17 @@ export abstract class TypeDeducer {
         return result;
     }
 
-    protected static initializeArgTypesArray(calls: FunctionCalls): ArgumentType<LowerBoundType>[] {
+    protected static argNames(calls: FunctionCalls): string[] {
         let numArgs = 0;
         for (let call of calls.calls){
             numArgs = Math.max(numArgs, call.args.length);
         }
 
-        let argTypes: ArgumentType<LowerBoundType>[] = [];
+        let argTypes: string[] = [];
         for (let i = 0; i < numArgs; i++) {
             // Get the name if it's provided. Otherwise make one up.
             let name = (i < calls.argDefs.length) ? calls.argDefs[i].name : `arg${i}`;
-            argTypes.push({name: name, type: bottom()});
+            argTypes.push(name);
         }
         return argTypes;
     }

@@ -1,60 +1,20 @@
-
-
 import {FunctionCalls} from "./ExecutionTracer";
 import {TypeDeducer, FunctionTypeDefinition, ArgumentType} from "./TypeDeducer";
-import {Type, bottom} from "./Type";
+import {Type} from "./Type";
 
 export class SimpleTypeDeducer extends TypeDeducer {
     getTypeFor(name: string, calls: FunctionCalls): FunctionTypeDefinition {
-        let argTypes: ArgumentType<Type>[] = TypeDeducer.initializeArgTypesArray(calls);
-        let returnValueType: Type = bottom();
+        let argTypes: ArgumentType<Type>[] = TypeDeducer.argNames(calls).map(name => ({name: name, type: new Type("bottom")}));
+        let returnValueType = new Type("bottom");
 
         for (let call of calls.calls){
             call.args.forEach((arg, i) => {
-                argTypes[i].type = this.extend(argTypes[i].type, arg);
+                argTypes[i].type.extendSimple(arg);
             });
 
-            returnValueType = this.extend(returnValueType, call.returnValue);
+            returnValueType.extendSimple(call.returnValue);
         }
 
         return {name: name, argTypes: argTypes, returnValueType: returnValueType};
-    }
-
-    private extend(type: Type, value: any): Type {
-        if (value === null) {
-            type.nullType = true;
-            return type;
-        }
-        switch (typeof value) {
-            case "undefined":
-                type.undefinedType = true;
-                return type;
-            case "boolean":
-                type.booleanType = {true: true, false: true};
-                return type;
-            case "number":
-                type.numberType = true;
-                return type;
-            case "string":
-                type.stringType = true;
-                return type;
-            case "function":
-                type.functionType = true;
-                return type;
-            case "object":
-                if (Array.isArray(value)) {
-                    let elementType: Type = bottom();
-                    for (let e of value){
-                        elementType = this.extend(elementType, e);
-                    }
-                    type.arrayOrTupleType = {kind: "array", type: elementType};
-                    return type;
-                }
-                else {
-                    return type/*"top"*/;
-                }
-                default:
-                    throw new Error(`Cannot convert ${typeof value}: ${value}`);
-        }
     }
 }

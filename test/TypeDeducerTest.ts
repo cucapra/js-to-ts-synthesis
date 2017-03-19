@@ -2,18 +2,19 @@ import * as mocha from "mocha-typescript";
 import {assert} from "chai";
 import {SimpleTypeDeducer} from  "../SimpleTypeDeducer";
 import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
-import {toNumberSet, toStringSet, Type, bottom} from "../Type";
+import {UpperBoundTypeDeducer} from "../UpperBoundTypeDeducer";
+import {toNumberSet, toStringSet, Type} from "../Type";
 import {ArgDef} from "../ExecutionTracer";
 
 let assign = require("object.assign");
 
 // Makes tests shorter.
-function t(d: {}): Type {
-    return assign(bottom(), d);
+function t(d: {}, from: "top"|"bottom" = "bottom"): Type {
+    return assign(new Type(from), d);
 }
 
-function a(a: string): ArgDef {
-    return {name: a, typeofChecks: {"===": [], "!==": []}};
+function a(a: string, eqType: string[] = [], neqType: string[] = []): ArgDef {
+    return {name: a, typeofChecks: {"===": eqType, "!==": neqType}};
 }
 
 @mocha.suite
@@ -36,7 +37,7 @@ class TypeDeducerTest {
                         {name: "x", type: t({numberType: true})},
                         {name: "y", type: t({stringType: true})},
                         {name: "z", type: t({arrayOrTupleType: {kind: "array", type: t({numberType: true})}})},
-                        {name: "w", type: "top"}
+                        {name: "w", type: t({objectType: {}})}
                     ],
                     returnValueType: t({undefinedType: true})
                 }
@@ -69,6 +70,29 @@ class TypeDeducerTest {
                         }})}
                     ],
                     returnValueType: t({undefinedType: true})
+                }
+            ]
+        });
+    }
+
+    @mocha.test
+    testUpperBoundTypeDeducer() {
+        let typeDeducer = new UpperBoundTypeDeducer();
+        let calls = {
+            f: {file: "sample.js", argDefs: [a("x", ["string"]), a("y", [], ["string"])], calls: [
+                {args: ["foo", 42], returnValue: undefined}
+            ]}
+        };
+
+        assert.deepEqual(typeDeducer.getAllTypeDefinitions(calls), {
+            "sample.js": [
+                {
+                    name: "f",
+                    argTypes: [
+                        {name: "x", type: t({stringType: true})},
+                        {name: "y", type: t({stringType: {}}, "top")}
+                    ],
+                    returnValueType: t({}, "top")
                 }
             ]
         });

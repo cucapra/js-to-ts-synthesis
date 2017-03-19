@@ -6,11 +6,13 @@ import {TypeDeducer} from "./TypeDeducer";
 import {SimpleTypeDeducer} from "./SimpleTypeDeducer";
 import {NullTypeDeducer} from "./NullTypeDeducer";
 import {LowerBoundTypeDeducer} from "./LowerBoundTypeDeducer";
+import {UpperBoundTypeDeducer} from "./UpperBoundTypeDeducer";
 
 const TYPE_DEDUCERS_BY_NAME: {[name: string]: () => TypeDeducer} = {
     "SimpleTypeDeducer": () => new SimpleTypeDeducer(),
     "NullTypeDeducer": () => new NullTypeDeducer(),
-    "LowerBoundTypeDeducer": () => new LowerBoundTypeDeducer()
+    "LowerBoundTypeDeducer": () => new LowerBoundTypeDeducer(),
+    "UpperBoundTypeDeducer": () => new UpperBoundTypeDeducer()
 };
 
 export class Pipeline {

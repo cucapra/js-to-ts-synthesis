@@ -25,11 +25,13 @@
     "immutable": "^3.8.1",
     "js-beautify": "^1.6.11",
     "line-reader-sync": "^0.1.0",
+    "typescript-array-extensions": "^0.4.3",
     "yargs": "^6.6.0"
   },
   "devDependencies": {
     "@types/assert": "0.0.31",
     "@types/chai": "^3.4.35",
+    "@types/deep-equal": "^1.0.0",
     "@types/line-reader": "0.0.28",
     "@types/mocha": "^2.2.39",
     "@types/node": "^7.0.5",

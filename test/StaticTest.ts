@@ -13,6 +13,6 @@ class StaticTest {
                 throw new TypeError("name must be a string");
             }
         };
-        assert.deepEqual(argDefs(f), [{name: "name", typeofChecks: {"===": [], "!==": ["string"]}}]);
+        assert.deepEqual(argDefs(f), [{name: "name", typeofChecks: {"===": ["string"], "!==": []}}]);
     }
 }

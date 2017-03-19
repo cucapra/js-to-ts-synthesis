@@ -6,6 +6,10 @@ export interface ArgDef {
     typeofChecks: {"===": string[], "!==": string[]};
 }
 
+function rev(op: "==="|"!=="): "==="|"!==" {
+    return (op === "===") ? "!==" : "===";
+}
+
 function typeofChecks(node: FunctionExpression): {[name: string]: {"===": string[], "!==": string[]}} {
 
     // This is pretty restrictive for now.
@@ -30,7 +34,7 @@ function typeofChecks(node: FunctionExpression): {[name: string]: {"===": string
                 if (!(s.test.left.argument.name in result))
                     result[s.test.left.argument.name] = {"===": [], "!==": []};
 
-                result[s.test.left.argument.name][s.test.operator].push(s.test.right.value);
+                result[s.test.left.argument.name][rev(s.test.operator)].push(s.test.right.value);
         }
     }
 

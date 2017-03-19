@@ -4,7 +4,6 @@ import * as path from "path";
 
 import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
 import {FunctionTypeDefinition} from "./TypeDeducer";
-import {toDefinition} from "./Type";
 import {argDefs, ArgDef} from "./instrumentation/Static";
 
 export interface ExportedFunctions {
@@ -15,21 +14,21 @@ function definitionFor(func: FunctionTypeDefinition): string {
     let args: string[] = [];
 
     func.argTypes.forEach(arg => {
-        args.push(`${arg.name}: ${toDefinition(arg.type)}`);
+        args.push(`${arg.name}: ${arg.type.toDefinition()}`);
     });
 
-    return `export declare function ${func.name}(${args.join(", ")}): ${toDefinition(func.returnValueType)};\n`;
+    return `export declare function ${func.name}(${args.join(", ")}): ${func.returnValueType.toDefinition()};\n`;
 }
 
 function validatingTestFor(func: FunctionTypeDefinition, call: FunctionCall): string {
     let test = "";
     let args: string[] = [];
     call.args.forEach((arg, i) => {
-        test += `var ${func.argTypes[i].name}: ${toDefinition(func.argTypes[i].type)} = ${JSON.stringify(arg)};\n`;
+        test += `var ${func.argTypes[i].name}: ${func.argTypes[i].type.toDefinition()} = ${JSON.stringify(arg)};\n`;
         args.push(func.argTypes[i].name);
     });
 
-    test += `var result: ${toDefinition(func.returnValueType)} = ${func.name}(${args.join(", ")});\n`;
+    test += `var result: ${func.returnValueType.toDefinition()} = ${func.name}(${args.join(", ")});\n`;
     return `(function (){\n${test}\n})();\n`;
 }
 
