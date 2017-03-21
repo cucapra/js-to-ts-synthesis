@@ -31,6 +31,7 @@
   "devDependencies": {
     "@types/assert": "0.0.31",
     "@types/chai": "^3.4.35",
+    "@types/chai-oequal": "0.0.1",
     "@types/deep-equal": "^1.0.0",
     "@types/line-reader": "0.0.28",
     "@types/mocha": "^2.2.39",
@@ -38,6 +39,7 @@
     "@types/tmp": "0.0.32",
     "@types/yargs": "^6.6.0",
     "chai": "^3.5.0",
+    "chai-oequal": "0.0.1",
     "mocha": "^3.2.0",
     "mocha-typescript": "^1.0.21",
     "object.assign": "^4.0.4",

@@ -18,15 +18,6 @@ class PipelineTest {
 
     @mocha.test
     @mocha.timeout(300000)
-    testSimpleModule() {
-        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse", this.tempFolder(), TEST_TIMEOUT_WINDOW, "SimpleTypeDeducer");
-        pipeline.run();
-
-        assert.equal(fs.readFileSync(path.join(pipeline.workingDir, "lib", "index.d.ts"), "utf-8"), "export declare function gitUrlParse(url: string): object;\n");
-    }
-
-    @mocha.test
-    @mocha.timeout(300000)
     testBadTypeDeducer() {
         let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse", this.tempFolder(), TEST_TIMEOUT_WINDOW, "NullTypeDeducer");
 

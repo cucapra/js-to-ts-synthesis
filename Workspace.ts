@@ -10,7 +10,7 @@ export interface ExportedFunctions {
     [name: string]: ArgDef[];
 }
 
-function definitionFor(func: FunctionTypeDefinition): string {
+export function definitionFor(func: FunctionTypeDefinition): string {
     let args: string[] = [];
 
     func.argTypes.forEach(arg => {

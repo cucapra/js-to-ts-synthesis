@@ -1,49 +1,25 @@
 import * as mocha from "mocha-typescript";
 import {assert} from "chai";
-import {SimpleTypeDeducer} from  "../SimpleTypeDeducer";
+import {FunctionTypeDefinition} from "../TypeDeducer";
 import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
 import {UpperBoundTypeDeducer} from "../UpperBoundTypeDeducer";
-import {toNumberSet, toStringSet, Type} from "../Type";
+import {definitionFor} from "../Workspace";
 import {ArgDef} from "../ExecutionTracer";
-
-let assign = require("object.assign");
-
-// Makes tests shorter.
-function t(d: {}, from: "top"|"bottom" = "bottom"): Type {
-    return assign(new Type(from), d);
-}
 
 function a(a: string, eqType: string[] = [], neqType: string[] = []): ArgDef {
     return {name: a, typeofChecks: {"===": eqType, "!==": neqType}};
 }
 
+function toDefinitions(d: { [sourceFile: string]: FunctionTypeDefinition[] }): { [sourceFile: string]: string[] } {
+    let definitions: { [sourceFile: string]: string[] } = {};
+    for (let sourceFile in d) {
+        definitions[sourceFile] = d[sourceFile].map(definitionFor);
+    }
+    return definitions;
+}
+
 @mocha.suite
 class TypeDeducerTest {
-
-    @mocha.test
-    testSimpleTypeDeducer() {
-        let typeDeducer = new SimpleTypeDeducer();
-        let calls = {
-            f: {file: "sample.js", argDefs: [a("x"), a("y"), a("z"), a("w")], calls: [
-                {args: [42, "foo", [1, 2], {foo: "bar"}], returnValue: undefined}
-            ]}
-        };
-
-        assert.deepEqual(typeDeducer.getAllTypeDefinitions(calls), {
-            "sample.js": [
-                {
-                    name: "f",
-                    argTypes: [
-                        {name: "x", type: t({numberType: true})},
-                        {name: "y", type: t({stringType: true})},
-                        {name: "z", type: t({arrayOrTupleType: {kind: "array", type: t({numberType: true})}})},
-                        {name: "w", type: t({objectType: {}})}
-                    ],
-                    returnValueType: t({undefinedType: true})
-                }
-            ]
-        });
-    }
 
     @mocha.test
     testLowerBoundTypeDeducer() {
@@ -54,24 +30,8 @@ class TypeDeducerTest {
             ]}
         };
 
-        assert.deepEqual(typeDeducer.getAllTypeDefinitions(calls), {
-            "sample.js": [
-                {
-                    name: "f",
-                    argTypes: [
-                        {name: "x", type: t({numberType: toNumberSet(42)})},
-                        {name: "y", type: t({stringType: toStringSet("foo")})},
-                        {name: "z", type: t({arrayOrTupleType: {kind: "tuple", type: [
-                            t({numberType: toNumberSet(1)}),
-                            t({numberType: toNumberSet(2)})
-                        ]}})},
-                        {name: "w", type: t({objectType: {
-                            foo: t({stringType: toStringSet("bar")})
-                        }})}
-                    ],
-                    returnValueType: t({undefinedType: true})
-                }
-            ]
+        assert.deepEqual(toDefinitions(typeDeducer.getAllTypeDefinitions(calls)), {
+            "sample.js": ["export declare function f(x: 42, y: \"foo\", z: [1, 2], w: {foo: \"bar\"}): undefined;\n"]
         });
     }
 
@@ -84,17 +44,8 @@ class TypeDeducerTest {
             ]}
         };
 
-        assert.deepEqual(typeDeducer.getAllTypeDefinitions(calls), {
-            "sample.js": [
-                {
-                    name: "f",
-                    argTypes: [
-                        {name: "x", type: t({stringType: true})},
-                        {name: "y", type: t({stringType: {}}, "top")}
-                    ],
-                    returnValueType: t({}, "top")
-                }
-            ]
+        assert.deepEqual(toDefinitions(typeDeducer.getAllTypeDefinitions(calls)), {
+            "sample.js": ["export declare function f(x: string, y: null|undefined|boolean|number|((...args: any[]) => any)|{}[]|object): {};\n"]
         });
     }
 }

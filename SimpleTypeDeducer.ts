@@ -9,10 +9,10 @@ export class SimpleTypeDeducer extends TypeDeducer {
 
         for (let call of calls.calls){
             call.args.forEach((arg, i) => {
-                argTypes[i].type.extendSimple(arg);
+                argTypes[i].type.extend(arg);
             });
 
-            returnValueType.extendSimple(call.returnValue);
+            returnValueType.extend(call.returnValue);
         }
 
         return {name: name, argTypes: argTypes, returnValueType: returnValueType};
