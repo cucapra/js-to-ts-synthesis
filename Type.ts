@@ -1,6 +1,4 @@
-export type NumberSet = {[key: number]: true};
-export type StringSet = {[key: string]: true};
-export type Map<V> = { [key: string]: V };
+import {Set, Map} from "es6-shim";
 
 type Variants = string[];
 
@@ -108,11 +106,11 @@ export class BooleanTypeComponent implements TypeComponent<boolean> {
 }
 
 export class NumberTypeComponent implements TypeComponent<number> {
-    private values: true | NumberSet = {};
+    private values: true | Set<number> = new Set<number>();
 
     include(value: number) {
         if (this.values !== true)
-            this.values[value] = true;
+            this.values.add(value);
         return this;
     }
 
@@ -122,7 +120,7 @@ export class NumberTypeComponent implements TypeComponent<number> {
     }
 
     excludeAll() {
-        this.values = {};
+        this.values = new Set<number>();
         return this;
     }
 
@@ -133,17 +131,17 @@ export class NumberTypeComponent implements TypeComponent<number> {
     toDefinition() {
         if (this.values === true)
             return ["number"];
-        return Object.keys(this.values).map(n => JSON.stringify(parseInt(n)));
+        return Array.from(this.values).map(n => JSON.stringify(n));
     }
 }
 
 
 export class StringTypeComponent implements TypeComponent<string> {
-    private values: true | StringSet = {};
+    private values: true | Set<string> = new Set<string>();
 
     include(value: string) {
         if (this.values !== true)
-            this.values[value] = true;
+            this.values.add(value);
         return this;
     }
 
@@ -153,7 +151,7 @@ export class StringTypeComponent implements TypeComponent<string> {
     }
 
     excludeAll() {
-        this.values = {};
+        this.values = new Set<string>();
         return this;
     }
 
@@ -165,7 +163,7 @@ export class StringTypeComponent implements TypeComponent<string> {
         if (this.values === true)
             return ["string"];
 
-        return Object.keys(this.values).map(n => JSON.stringify(n));
+        return Array.from(this.values).map(n => JSON.stringify(n));
     }
 }
 
@@ -243,13 +241,13 @@ export class ArrayOrTupleTypeComponent implements TypeComponent<any[]> {
 }
 
 export class ObjectTypeComponent implements TypeComponent<{[key: string]: any}> {
-    private allowedTypes: true | Map<Type>[] = [];
+    private allowedTypes: true | Map<string, Type>[] = [];
 
     include(value: {[key: string]: any}) {
         if (this.allowedTypes !== true) {
-            let type: Map<Type> = {};
+            let type = new Map<string, Type>();
             for (let key in value) {
-                type[key] = new Type("bottom").extend(value[key]);
+                type.set(key, new Type("bottom").extend(value[key]));
             }
             this.allowedTypes.push(type);
         }
@@ -274,7 +272,7 @@ export class ObjectTypeComponent implements TypeComponent<{[key: string]: any}> 
         if (this.allowedTypes === true)
             return ["object"];
 
-        return this.allowedTypes.map(type => "{" + Object.keys(type).map(k => `${k}: ${type[k].toDefinition()}`).join(", ") + "}");
+        return this.allowedTypes.map(type => "{" + Array.from(type.entries()).map(entry => `${entry[0]}: ${entry[1].toDefinition()}`).join(", ") + "}");
     }
 }
 

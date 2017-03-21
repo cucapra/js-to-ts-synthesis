@@ -22,6 +22,7 @@
   "homepage": "https://github.com/cucapra/js-to-ts-synthesis#readme",
   "dependencies": {
     "acorn": "^4.0.11",
+    "es6-shim": "^0.35.3",
     "immutable": "^3.8.1",
     "js-beautify": "^1.6.11",
     "line-reader-sync": "^0.1.0",
@@ -33,6 +34,7 @@
     "@types/chai": "^3.4.35",
     "@types/chai-oequal": "0.0.1",
     "@types/deep-equal": "^1.0.0",
+    "@types/es6-shim": "^0.31.32",
     "@types/line-reader": "0.0.28",
     "@types/mocha": "^2.2.39",
     "@types/node": "^7.0.5",
