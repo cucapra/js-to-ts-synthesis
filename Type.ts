@@ -1,4 +1,6 @@
 import {Set, Map} from "es6-shim";
+import * as randomstring from "randomstring";
+import {Validator} from "./Validator";
 
 type Variants = string[];
 
@@ -9,6 +11,8 @@ export interface TypeComponent<T> {
 
     isTop(): boolean;
     toDefinition(): Variants;
+
+    generalize(validator: Validator): void;
 }
 
 export class NullTypeComponent implements TypeComponent<null> {
@@ -36,6 +40,11 @@ export class NullTypeComponent implements TypeComponent<null> {
     toDefinition() {
         return this.canBeNull ? ["null"] : [];
     }
+
+    generalize(validator: Validator) {
+        if (!this.canBeNull && validator(null))
+            this.canBeNull = true;
+    }
 }
 
 export class UndefinedTypeComponent implements TypeComponent<undefined> {
@@ -62,6 +71,11 @@ export class UndefinedTypeComponent implements TypeComponent<undefined> {
 
     toDefinition() {
         return this.canBeUndefined ? ["undefined"] : [];
+    }
+
+    generalize(validator: Validator) {
+        if (!this.canBeUndefined && validator(undefined))
+            this.canBeUndefined = true;
     }
 }
 
@@ -103,6 +117,13 @@ export class BooleanTypeComponent implements TypeComponent<boolean> {
         }
         return [];
     }
+
+    generalize(validator: Validator) {
+        if (!this.canBeTrue && validator(true))
+            this.canBeTrue = true;
+        if (!this.canBeFalse && validator(false))
+            this.canBeFalse = true;
+    }
 }
 
 export class NumberTypeComponent implements TypeComponent<number> {
@@ -132,6 +153,11 @@ export class NumberTypeComponent implements TypeComponent<number> {
         if (this.values === true)
             return ["number"];
         return Array.from(this.values).map(n => JSON.stringify(n));
+    }
+
+    generalize(validator: Validator) {
+        if (this.values !== true && validator(Math.random))
+            this.values = true;
     }
 }
 
@@ -165,6 +191,11 @@ export class StringTypeComponent implements TypeComponent<string> {
 
         return Array.from(this.values).map(n => JSON.stringify(n));
     }
+
+    generalize(validator: Validator) {
+        if (this.values !== true && validator(randomstring.generate()))
+            this.values = true;
+    }
 }
 
 // TODO: Implement better
@@ -192,6 +223,11 @@ export class FunctionTypeComponent implements TypeComponent<Function> {
 
     toDefinition() {
         return this.canBeFunction ? ["((...args: any[]) => any)"] : [];
+    }
+
+    generalize(validator: Validator) {
+        if (!this.canBeFunction && validator((x: any) => x))
+            this.canBeFunction = true;
     }
 }
 
@@ -238,6 +274,11 @@ export class ArrayOrTupleTypeComponent implements TypeComponent<any[]> {
             values.push("undefined[]");
         return values;
     }
+
+    generalize(validator: Validator) {
+        if (this.allowedTypes !== true && validator([]))
+            this.allowedTypes = true;
+    }
 }
 
 export class ObjectTypeComponent implements TypeComponent<{[key: string]: any}> {
@@ -273,6 +314,11 @@ export class ObjectTypeComponent implements TypeComponent<{[key: string]: any}> 
             return ["object"];
 
         return this.allowedTypes.map(type => "{" + Array.from(type.entries()).map(entry => `${entry[0]}: ${entry[1].toDefinition()}`).join(", ") + "}");
+    }
+
+    generalize(validator: Validator) {
+        if (this.allowedTypes !== true && validator({}))
+            this.allowedTypes = true;
     }
 }
 
@@ -438,6 +484,17 @@ export class Type {
             }
         }
         return this;
+    }
+
+    generalize(validator: Validator) {
+        this.nullType.generalize(validator);
+        this.undefinedType.generalize(validator);
+        this.booleanType.generalize(validator);
+        this.numberType.generalize(validator);
+        this.stringType.generalize(validator);
+        this.functionType.generalize(validator);
+        this.arrayOrTupleType.generalize(validator);
+        this.objectType.generalize(validator);
     }
 
 /*

@@ -4,11 +4,7 @@ import {FunctionTypeDefinition} from "../TypeDeducer";
 import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
 import {UpperBoundTypeDeducer} from "../UpperBoundTypeDeducer";
 import {definitionFor} from "../Workspace";
-import {ArgDef} from "../ExecutionTracer";
-
-function a(a: string, eqType: string[] = [], neqType: string[] = []): ArgDef {
-    return {name: a, typeofChecks: {"===": eqType, "!==": neqType}};
-}
+import {FunctionInfo} from "../Module";
 
 function toDefinitions(d: { [sourceFile: string]: FunctionTypeDefinition[] }): { [sourceFile: string]: string[] } {
     let definitions: { [sourceFile: string]: string[] } = {};
@@ -25,9 +21,14 @@ class TypeDeducerTest {
     testLowerBoundTypeDeducer() {
         let typeDeducer = new LowerBoundTypeDeducer();
         let calls = {
-            f: {file: "sample.js", argDefs: [a("x"), a("y"), a("z"), a("w")], calls: [
-                {args: [42, "foo", [1, 2], {foo: "bar"}], returnValue: undefined}
-            ]}
+            f: {
+                file: "sample.js",
+                functionInfo: new FunctionInfo((x: any, y: any, z: any, w: any) => {
+                }),
+                calls: [
+                    {args: [42, "foo", [1, 2], {foo: "bar"}], returnValue: undefined}
+                ]
+            }
         };
 
         assert.deepEqual(toDefinitions(typeDeducer.getAllTypeDefinitions(calls)), {
@@ -39,9 +40,18 @@ class TypeDeducerTest {
     testUpperBoundTypeDeducer() {
         let typeDeducer = new UpperBoundTypeDeducer();
         let calls = {
-            f: {file: "sample.js", argDefs: [a("x", ["string"]), a("y", [], ["string"])], calls: [
-                {args: ["foo", 42], returnValue: undefined}
-            ]}
+            f: {
+                file: "sample.js",
+                functionInfo: new FunctionInfo((x: any, y: any) => {
+                    if (typeof x !== "string")
+                        throw TypeError();
+                    if (typeof y === "string")
+                        throw TypeError();
+                }),
+                calls: [
+                    {args: ["foo", 42], returnValue: undefined}
+                ]
+            }
         };
 
         assert.deepEqual(toDefinitions(typeDeducer.getAllTypeDefinitions(calls)), {

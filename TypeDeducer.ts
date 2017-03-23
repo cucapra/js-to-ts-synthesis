@@ -35,7 +35,7 @@ export abstract class TypeDeducer {
         let argTypes: string[] = [];
         for (let i = 0; i < numArgs; i++) {
             // Get the name if it's provided. Otherwise make one up.
-            let name = (i < calls.argDefs.length) ? calls.argDefs[i].name : `arg${i}`;
+            let name = (i < calls.functionInfo.args.length) ? calls.functionInfo.args[i].name : `arg${i}`;
             argTypes.push(name);
         }
         return argTypes;

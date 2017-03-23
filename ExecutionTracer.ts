@@ -2,7 +2,8 @@ import * as path from "path";
 import * as fs from "fs";
 import { transformFileSync } from "babel-core";
 
-import {Workspace, ExportedFunctions} from "./Workspace";
+import {Workspace} from "./Workspace";
+import {FunctionInfo} from "./Module";
 import * as hooks from "./instrumentation/hooks";
 
 // No definition file for this one.
@@ -25,7 +26,7 @@ export interface ArgDef {
 
 export interface FunctionCalls {
     file: string; // The file where the function is defined.
-    argDefs: ArgDef[];
+    functionInfo: FunctionInfo;
     calls: FunctionCall[];
 }
 
@@ -44,7 +45,7 @@ export class ExecutionTracer {
     }
 
     trace(): { [functionName: string]: FunctionCalls } {
-        let exportedFunctions = this.workspace.getExportedFunctions();
+        let exportedFunctions = this.workspace.getModule().exportedFunctions;
         let instrumentationOutputFile = path.join(this.workspace.directory, "instrumentation_output.txt");
 
         // Add some code to trace function inputs and outputs.
@@ -62,7 +63,7 @@ export class ExecutionTracer {
         return this.readInstrumentationOutput(instrumentationOutputFile, exportedFunctions);
     }
 
-    private injectInstrumentation(sourceFile: string, hooks?: {instrumentationOutputFile: string, exportedFunctions: ExportedFunctions}) {
+    private injectInstrumentation(sourceFile: string, hooks?: {instrumentationOutputFile: string, exportedFunctions: { [functionName: string]: FunctionInfo }}) {
         // Aran struggles with const expressions for some reason. Use babel to get rid of those.
         // Also gives us a smaller subset of JS to work with.
         let source = transformFileSync(sourceFile, {presets: ["env"]}).code;
@@ -88,7 +89,7 @@ ${source}
         fs.appendFileSync(path.join(this.workspace.directory, ".eslintignore"), "\n**/*.js");
     }
 
-    private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: ExportedFunctions): { [functionName: string]: FunctionCalls } {
+    private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: { [functionName: string]: FunctionInfo }): { [functionName: string]: FunctionCalls } {
         let calls: { [filename: string]: FunctionCalls } = {};
 
         let lrs = new LineReaderSync(instrumentationOutputFile);
@@ -102,7 +103,7 @@ ${source}
                 case "FunctionCall":
                     // If this is the first instance of this function, pull in the arg names as well.
                     if (!(lineObj.name in calls)) {
-                        calls[lineObj.name] = {file: lineObj.file, argDefs: exportedFunctions[lineObj.name], calls: []};
+                        calls[lineObj.name] = {file: lineObj.file, functionInfo: exportedFunctions[lineObj.name], calls: []};
                     }
                     calls[lineObj.name].calls.push({args: lineObj.args, returnValue: lineObj.returnValue});
                     break;
@@ -118,7 +119,7 @@ ${source}
         return calls;
     }
 
-    private checkCoverage(calls: { [functionName: string]: FunctionCalls }, exportedFunctions: ExportedFunctions) {
+    private checkCoverage(calls: { [functionName: string]: FunctionCalls }, exportedFunctions: { [functionName: string]: FunctionInfo }) {
         let exportedFunctionsWithNoTests = 0;
         for (let f in exportedFunctions) {
             if (!(f in calls)) {

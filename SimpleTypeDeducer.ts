@@ -1,20 +1,15 @@
 import {FunctionCalls} from "./ExecutionTracer";
-import {TypeDeducer, FunctionTypeDefinition, ArgumentType} from "./TypeDeducer";
-import {Type} from "./Type";
+import {FunctionTypeDefinition} from "./TypeDeducer";
+import {LowerBoundTypeDeducer} from "./LowerBoundTypeDeducer";
+import {validatorForArg, validatorForReturnType} from "./Validator";
 
-export class SimpleTypeDeducer extends TypeDeducer {
+export class SimpleTypeDeducer extends LowerBoundTypeDeducer {
     getTypeFor(name: string, calls: FunctionCalls): FunctionTypeDefinition {
-        let argTypes: ArgumentType<Type>[] = TypeDeducer.argNames(calls).map(name => ({name: name, type: new Type("bottom")}));
-        let returnValueType = new Type("bottom");
-
-        for (let call of calls.calls){
-            call.args.forEach((arg, i) => {
-                argTypes[i].type.extend(arg);
-            });
-
-            returnValueType.extend(call.returnValue);
+        let definition = super.getTypeFor(name, calls);
+        for (let i = 0; i < definition.argTypes.length; i++) {
+            definition.argTypes[i].type.generalize(validatorForArg(calls.functionInfo, calls.calls, i));
         }
-
-        return {name: name, argTypes: argTypes, returnValueType: returnValueType};
+        definition.returnValueType.generalize(validatorForReturnType(calls.functionInfo, calls.calls));
+        return definition;
     }
 }

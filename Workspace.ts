@@ -4,11 +4,7 @@ import * as path from "path";
 
 import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
 import {FunctionTypeDefinition} from "./TypeDeducer";
-import {argDefs, ArgDef} from "./instrumentation/Static";
-
-export interface ExportedFunctions {
-    [name: string]: ArgDef[];
-}
+import {Module, FunctionModule, ObjectModule} from "./Module";
 
 export function definitionFor(func: FunctionTypeDefinition): string {
     let args: string[] = [];
@@ -74,29 +70,16 @@ export class Workspace {
         this.testTimeoutWindow = testTimeoutWindow;
     }
 
-    getExportedFunctions(): ExportedFunctions {
-        let exportedFunctions: {[name: string]: ArgDef[]} = {};
-        let maxDepth = 10;
-
-        function listExportedFunctions(target: any, path: string[]) {
-            if (path.length < maxDepth) {
-                switch (typeof target) {
-                    case "function":
-                        // A function at the top level won't have a path. Lookup its name.
-                        // Otherwise, pull the name as the property of the object where it
-                        // is defined.
-                        exportedFunctions[path.length > 0 ? path.join(".") : target.name] = argDefs(target);
-                    case "object":
-                        for (let key in target) {
-                            listExportedFunctions(target[key], path.concat([key]));
-                        }
-                }
-            }
+    getModule(): Module {
+        let main = require(this.mainFile);
+        switch (typeof main) {
+            case "function":
+                return new FunctionModule(main);
+            case "object":
+                return new ObjectModule(main);
+            default:
+                throw new Error(`${this.mainFile} does not export a function or object`);
         }
-
-
-        listExportedFunctions(require(this.mainFile), []);
-        return exportedFunctions;
     }
 
     runTests() {

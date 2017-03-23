@@ -5,7 +5,7 @@ import {Type} from "./Type";
 export class UpperBoundTypeDeducer extends TypeDeducer {
     getTypeFor(name: string, calls: FunctionCalls): FunctionTypeDefinition {
         let argChecks: {[name: string]: {"===": string[], "!==": string[]}} = {};
-        for (let a of calls.argDefs){
+        for (let a of calls.functionInfo.args){
             argChecks[a.name] = a.typeofChecks;
         }
 
