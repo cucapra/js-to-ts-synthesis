@@ -3,6 +3,7 @@ import {assert} from "chai";
 import {FunctionTypeDefinition} from "../TypeDeducer";
 import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
 import {UpperBoundTypeDeducer} from "../UpperBoundTypeDeducer";
+import {SimpleTypeDeducer} from "../SimpleTypeDeducer";
 import {definitionFor} from "../Workspace";
 import {FunctionInfo} from "../Module";
 
@@ -23,7 +24,7 @@ class TypeDeducerTest {
         let calls = {
             f: {
                 file: "sample.js",
-                functionInfo: new FunctionInfo((x: any, y: any, z: any, w: any) => {
+                functionInfo: new FunctionInfo("f", (x: any, y: any, z: any, w: any) => {
                 }),
                 calls: [
                     {args: [42, "foo", [1, 2], {foo: "bar"}], returnValue: undefined}
@@ -42,7 +43,7 @@ class TypeDeducerTest {
         let calls = {
             f: {
                 file: "sample.js",
-                functionInfo: new FunctionInfo((x: any, y: any) => {
+                functionInfo: new FunctionInfo("f", (x: any, y: any) => {
                     if (typeof x !== "string")
                         throw TypeError();
                     if (typeof y === "string")
@@ -56,6 +57,35 @@ class TypeDeducerTest {
 
         assert.deepEqual(toDefinitions(typeDeducer.getAllTypeDefinitions(calls)), {
             "sample.js": ["export declare function f(x: string, y: null|undefined|boolean|number|((...args: any[]) => any)|{}[]|object): {};\n"]
+        });
+    }
+
+
+    @mocha.test
+    testSimpleTypeDeducer() {
+        let typeDeducer = new SimpleTypeDeducer();
+        let calls = {
+            f: {
+                file: "sample.js",
+                functionInfo: new FunctionInfo("f", (x: any, y: any, z: any, w: any) => {
+                    if ((typeof x !== "number")
+                        || (typeof y !== "string")
+                        || !Array.isArray(z)
+                        || (typeof z[0] !== "number")
+                        || (typeof z[1] !== "number")
+                        || (typeof w !== "object")
+                        || (typeof w.foo !== "string"))
+
+                        throw TypeError("Bad argument");
+                }),
+                calls: [
+                    {args: [42, "foo", [1, 2], {foo: "bar"}], returnValue: undefined}
+                ]
+            }
+        };
+
+        assert.deepEqual(toDefinitions(typeDeducer.getAllTypeDefinitions(calls)), {
+            "sample.js": ["export declare function f(x: number, y: string, z: [number, number], w: {foo: string}): undefined;\n"]
         });
     }
 }

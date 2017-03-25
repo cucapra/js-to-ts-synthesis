@@ -22,6 +22,7 @@
   "homepage": "https://github.com/cucapra/js-to-ts-synthesis#readme",
   "dependencies": {
     "acorn": "^4.0.11",
+    "deep-clone": "^3.0.2",
     "es6-shim": "^0.35.3",
     "immutable": "^3.8.1",
     "js-beautify": "^1.6.11",
