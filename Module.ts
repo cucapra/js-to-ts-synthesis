@@ -1,9 +1,13 @@
 import {ArgDef, argDefs} from "./StaticAnalysis";
 
+export interface ModuleParameters {
+    treatAllErrorsAsTypeErrors: boolean;
+}
+
 export class FunctionInfo {
     args: ArgDef[];
 
-    constructor (public name: string, private f: Function) {
+    constructor (public name: string, private f: Function, private treatAllErrorsAsTypeErrors = false) {
         this.args = argDefs(f);
     }
 
@@ -12,10 +16,9 @@ export class FunctionInfo {
              this.f.apply(undefined, args);
         }
         catch (e) {
-            /*if (e instanceof TypeError)
-                return false;*/
-            return false;
-            // throw e;
+            if (this.treatAllErrorsAsTypeErrors || (e instanceof TypeError))
+                return false;
+            throw e;
         }
         return true;
     }
@@ -27,27 +30,27 @@ export abstract class Module {
 
 // Some modules just export a single function.
 export class FunctionModule extends Module {
-    constructor(main: Function & {name: string}) {
+    constructor(main: Function & {name: string}, parameters: ModuleParameters) {
         super();
-        this.exportedFunctions[main.name] = new FunctionInfo(main.name, main);
+        this.exportedFunctions[main.name] = new FunctionInfo(main.name, main, parameters.treatAllErrorsAsTypeErrors);
     }
 }
 
 export class ObjectModule extends Module {
-    constructor(main: object) {
+    constructor(main: object, parameters: ModuleParameters) {
         super();
-        this.exportFunctions(main, []);
+        this.exportFunctions(main, [], parameters);
     }
 
-    private exportFunctions(target: any, path: string[]) {
+    private exportFunctions(target: any, path: string[], parameters: ModuleParameters) {
         switch (typeof target) {
             case "function":
                 let name = path.join(".");
-                this.exportedFunctions[name] =  new FunctionInfo(name, target);
+                this.exportedFunctions[name] =  new FunctionInfo(name, target, parameters.treatAllErrorsAsTypeErrors);
                 break;
             case "object":
                 for (let key in target) {
-                    this.exportFunctions(target[key], path.concat([key]));
+                    this.exportFunctions(target[key], path.concat([key]), parameters);
                 }
                 break;
         }

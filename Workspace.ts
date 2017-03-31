@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
-import {FunctionModule, Module, ObjectModule} from "./Module";
+import {FunctionModule, Module, ModuleParameters, ObjectModule} from "./Module";
 import {FunctionTypeDefinition} from "./TypeDeducer";
 
 export function definitionFor(func: FunctionTypeDefinition): string {
@@ -41,7 +41,8 @@ export class Workspace {
     testFiles: string[];
     mainFile: string;
     testTimeoutWindow: number;
-    constructor(directory: string, repoUri: string, testTimeoutWindow: number) {
+    moduleParameters: ModuleParameters;
+    constructor(directory: string, repoUri: string, testTimeoutWindow: number, moduleParameters: ModuleParameters) {
         console.log(`Working directory is ${directory}`);
         this.directory = directory;
 
@@ -68,15 +69,16 @@ export class Workspace {
         this.mainFile = path.join(directory, module.main || module.files[0]);
 
         this.testTimeoutWindow = testTimeoutWindow;
+        this.moduleParameters = moduleParameters;
     }
 
     getModule(): Module {
         let main = require(this.mainFile);
         switch (typeof main) {
             case "function":
-                return new FunctionModule(main);
+                return new FunctionModule(main, this.moduleParameters);
             case "object":
-                return new ObjectModule(main);
+                return new ObjectModule(main, this.moduleParameters);
             default:
                 throw new Error(`${this.mainFile} does not export a function or object`);
         }

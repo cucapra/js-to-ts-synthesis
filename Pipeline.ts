@@ -2,35 +2,37 @@ import * as yargs from "yargs";
 
 import {ExecutionTracer} from "./ExecutionTracer";
 import {LowerBoundTypeDeducer} from "./LowerBoundTypeDeducer";
+import {ModuleParameters} from "./Module";
 import {NullTypeDeducer} from "./NullTypeDeducer";
 import {SimpleTypeDeducer} from "./SimpleTypeDeducer";
 import {TypeDeducer} from "./TypeDeducer";
 import {UpperBoundTypeDeducer} from "./UpperBoundTypeDeducer";
 import {Workspace} from "./Workspace";
 
-const TYPE_DEDUCERS_BY_NAME: {[name: string]: () => TypeDeducer} = {
-    "SimpleTypeDeducer": () => new SimpleTypeDeducer(),
-    "NullTypeDeducer": () => new NullTypeDeducer(),
-    "LowerBoundTypeDeducer": () => new LowerBoundTypeDeducer(),
-    "UpperBoundTypeDeducer": () => new UpperBoundTypeDeducer()
-};
+interface Function {
+    name: string;
+}
+
+const TYPE_DEDUCERS = [
+    SimpleTypeDeducer,
+    NullTypeDeducer,
+    LowerBoundTypeDeducer,
+    UpperBoundTypeDeducer
+];
 
 export class Pipeline {
-    readonly repoUri: string;
-    readonly workingDir: string;
-    readonly testTimeoutWindow: number;
-    readonly typeDeducer: TypeDeducer;
 
-    constructor(repoUri: string, workingDir: string,  testTimeoutWindow: number, typeDeducer: string) {
-        this.repoUri = repoUri;
-        this.workingDir = workingDir;
-        this.testTimeoutWindow = testTimeoutWindow;
-        this.typeDeducer = TYPE_DEDUCERS_BY_NAME[typeDeducer]();
+    constructor(
+        private repoUri: string,
+        private workingDir: string,
+        private testTimeoutWindow: number,
+        private typeDeducer: TypeDeducer,
+        private moduleParameters: ModuleParameters) {
     }
 
     run() {
         console.log("Starting");
-        let workspace = new Workspace(this.workingDir, this.repoUri, this.testTimeoutWindow);
+        let workspace = new Workspace(this.workingDir, this.repoUri, this.testTimeoutWindow, this.moduleParameters);
         let executions = new ExecutionTracer(workspace).trace();
         let types = this.typeDeducer.getAllTypeDefinitions(executions);
         workspace.exportTypeDefinitions(types, executions);
@@ -51,13 +53,17 @@ export function main() {
             describe: "The maximum time (ms) for which the test suite is run. If the test suite timed out, types are still collected, but may be incomplete.",
             default: 60000
         })
+        .option("treatAllErrorsAsTypeErrors", {
+            describe: "The Validator expects the library to throw a TypeError when a library encountered an argument of the wrong type. When this flag is set, any error is considered one caused by a bad argument",
+            default: false
+        })
         .option("typeDeducer", {
             describe: "The TypeDeducer implementation to use.",
-            choices: Object.keys(TYPE_DEDUCERS_BY_NAME),
+            choices: TYPE_DEDUCERS.map(t => (<any>t).name),
             default: "SimpleTypeDeducer"
         })
         .help()
         .argv;
-    let pipeline = new Pipeline(args["repo"], args["dir"], args["testTimeoutWindow"], args["typeDeducer"]);
+    let pipeline = new Pipeline(args["repo"], args["dir"], args["testTimeoutWindow"], args["typeDeducer"], {treatAllErrorsAsTypeErrors: args["treatAllErrorsAsTypeErrors"]});
     pipeline.run();
 }
