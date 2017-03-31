@@ -12,9 +12,10 @@ export class FunctionInfo {
              this.f.apply(undefined, args);
         }
         catch (e) {
-            if (e instanceof TypeError)
-                return false;
-            throw e;
+            /*if (e instanceof TypeError)
+                return false;*/
+            return false;
+            // throw e;
         }
         return true;
     }

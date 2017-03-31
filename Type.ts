@@ -1,13 +1,13 @@
 
-import {Validator} from "./Validator";
-import {NullTypeComponent} from "./type_components/NullTypeComponent";
-import {UndefinedTypeComponent} from "./type_components/UndefinedTypeComponent";
-import {BooleanTypeComponent} from "./type_components/BooleanTypeComponent";
-import {NumberTypeComponent} from "./type_components/NumberTypeComponent";
-import {StringTypeComponent} from "./type_components/StringTypeComponent";
 import {ArrayOrTupleTypeComponent} from "./type_components/ArrayOrTupleTypeComponent";
-import {ObjectTypeComponent} from "./type_components/ObjectTypeComponent";
+import {BooleanTypeComponent} from "./type_components/BooleanTypeComponent";
 import {FunctionTypeComponent} from "./type_components/FunctionTypeComponent";
+import {NullTypeComponent} from "./type_components/NullTypeComponent";
+import {NumberTypeComponent} from "./type_components/NumberTypeComponent";
+import {ObjectTypeComponent} from "./type_components/ObjectTypeComponent";
+import {StringTypeComponent} from "./type_components/StringTypeComponent";
+import {UndefinedTypeComponent} from "./type_components/UndefinedTypeComponent";
+import {Validator} from "./Validator";
 
 class TypeDefinitionBuilder {
     private pieces: string[] = [];

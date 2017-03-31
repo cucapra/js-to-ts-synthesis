@@ -1,11 +1,11 @@
-import * as mocha from "mocha-typescript";
 import {assert} from "chai";
-import {FunctionTypeDefinition} from "../TypeDeducer";
+import * as mocha from "mocha-typescript";
 import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
-import {UpperBoundTypeDeducer} from "../UpperBoundTypeDeducer";
-import {SimpleTypeDeducer} from "../SimpleTypeDeducer";
-import {definitionFor} from "../Workspace";
 import {FunctionInfo} from "../Module";
+import {SimpleTypeDeducer} from "../SimpleTypeDeducer";
+import {FunctionTypeDefinition} from "../TypeDeducer";
+import {UpperBoundTypeDeducer} from "../UpperBoundTypeDeducer";
+import {definitionFor} from "../Workspace";
 
 function toDefinitions(d: { [sourceFile: string]: FunctionTypeDefinition[] }): { [sourceFile: string]: string[] } {
     let definitions: { [sourceFile: string]: string[] } = {};

@@ -1,6 +1,6 @@
 import {FunctionCalls} from "./ExecutionTracer";
-import {TypeDeducer, FunctionTypeDefinition} from "./TypeDeducer";
 import {Type} from "./Type";
+import {FunctionTypeDefinition, TypeDeducer} from "./TypeDeducer";
 
 export class UpperBoundTypeDeducer extends TypeDeducer {
     getTypeFor(name: string, calls: FunctionCalls): FunctionTypeDefinition {

@@ -1,7 +1,7 @@
 let deepClone = require("deep-clone");
 
-import {FunctionInfo} from "./Module";
 import {FunctionCall} from "./ExecutionTracer";
+import {FunctionInfo} from "./Module";
 
 const NUM_INVOCATIONS = 5;
 type KeyType = number|string;
@@ -19,20 +19,24 @@ export abstract class Validator {
     }
 }
 
+// Probably the best we can do for return types at this point.
+export class NoopValidator extends Validator {
+
+    validate(valueProvider: ValueProvider) {
+        return true;
+    }
+}
+
 export class ArgValidator extends Validator {
 
-    constructor(private functionInfo: FunctionInfo, private testCalls: FunctionCall[], private argOrReturnType: number | undefined) {
+    constructor(private functionInfo: FunctionInfo, private testCalls: FunctionCall[], private arg: number) {
         super();
     }
 
     validate(valueProvider: ValueProvider): boolean {
 
-        if (this.argOrReturnType === undefined) {
-            return false; // Nothing to do for return types (yet).
-        }
-
-        if (this.argOrReturnType >= this.functionInfo.args.length)
-            throw Error(`Argument ${this.argOrReturnType} out of bounds`);
+        if (this.arg >= this.functionInfo.args.length)
+            throw Error(`Argument ${this.arg} out of bounds`);
         console.log(`Call ${this.functionInfo.name}`);
 
         let timesToRun = valueProvider.singleValue ? 1 : NUM_INVOCATIONS;
@@ -46,7 +50,7 @@ export class ArgValidator extends Validator {
             let args = deepClone(this.testCalls[Math.floor(Math.random() * this.testCalls.length)].args);
 
             for (let i = 0; i < args.length; i++) {
-                if (i === this.argOrReturnType) {
+                if (i === this.arg) {
                     let value = valueProvider.value(args[i]);
                     console.log(`- ${JSON.stringify(value)}`);
                     args[i] = value;

@@ -1,12 +1,12 @@
 import * as yargs from "yargs";
 
-import {Workspace} from "./Workspace";
 import {ExecutionTracer} from "./ExecutionTracer";
-import {TypeDeducer} from "./TypeDeducer";
-import {SimpleTypeDeducer} from "./SimpleTypeDeducer";
-import {NullTypeDeducer} from "./NullTypeDeducer";
 import {LowerBoundTypeDeducer} from "./LowerBoundTypeDeducer";
+import {NullTypeDeducer} from "./NullTypeDeducer";
+import {SimpleTypeDeducer} from "./SimpleTypeDeducer";
+import {TypeDeducer} from "./TypeDeducer";
 import {UpperBoundTypeDeducer} from "./UpperBoundTypeDeducer";
+import {Workspace} from "./Workspace";
 
 const TYPE_DEDUCERS_BY_NAME: {[name: string]: () => TypeDeducer} = {
     "SimpleTypeDeducer": () => new SimpleTypeDeducer(),

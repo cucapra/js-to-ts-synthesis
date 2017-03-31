@@ -1,10 +1,10 @@
-import * as path from "path";
-import * as fs from "fs";
 import { transformFileSync } from "babel-core";
+import * as fs from "fs";
+import * as path from "path";
 
-import {Workspace} from "./Workspace";
-import {FunctionInfo} from "./Module";
 import * as hooks from "./instrumentation/hooks";
+import {FunctionInfo} from "./Module";
+import {Workspace} from "./Workspace";
 
 // No definition file for this one.
 let LineReaderSync = require("line-reader-sync");

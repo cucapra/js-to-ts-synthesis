@@ -3,8 +3,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
+import {FunctionModule, Module, ObjectModule} from "./Module";
 import {FunctionTypeDefinition} from "./TypeDeducer";
-import {Module, FunctionModule, ObjectModule} from "./Module";
 
 export function definitionFor(func: FunctionTypeDefinition): string {
     let args: string[] = [];

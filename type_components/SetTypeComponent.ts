@@ -1,8 +1,11 @@
-import {TypeComponent} from "./TypeComponent";
+import {Set} from "immutable";
 import {Validator} from "../Validator";
+import {TypeComponent} from "./TypeComponent";
 
-export abstract class SetTypeComponent<T> implements TypeComponent<T> {
-    private values: true | Set<T> = new Set<T>();
+type AnyConstraint = undefined;
+
+export abstract class SetTypeComponent<T> implements TypeComponent<T, T | AnyConstraint> {
+    private values: true | Set<T> = Set<T>().asMutable();
 
     include(value: T) {
         if (this.values !== true)
@@ -15,9 +18,7 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
             this.values = true;
         }
         else if (this.values !== true) {
-            for (let value of Array.from(other.values.values())) {
-                this.values.add(value);
-            }
+            this.values.merge(other.values);
         }
 
         return this;
@@ -29,7 +30,7 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
     }
 
     excludeAll() {
-        this.values = new Set<T>();
+        this.values = Set<T>().asMutable();
         return this;
     }
 
@@ -37,14 +38,24 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
         return this.values === true;
     }
 
+    isBottom() {
+        return this.values !== true && this.values.size === 0;
+    }
+
     toDefinition() {
         if (this.values === true)
             return [this.getName()];
-        return Array.from(this.values).map(n => JSON.stringify(n));
+        return this.values.toArray().map(n => JSON.stringify(n));
+    }
+
+    toConstraints() {
+        if (this.values === true)
+            return [undefined];
+        return this.values.toArray();
     }
 
     generalize(validator: Validator) {
-        if (this.values !== true && validator.validate({value: () => this.valueNotInSet()}))
+        if (!this.isBottom() && !this.isTop() && validator.validate({value: () => this.valueNotInSet()}))
             this.values = true;
     }
 

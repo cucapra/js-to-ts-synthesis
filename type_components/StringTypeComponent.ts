@@ -1,5 +1,5 @@
-import {SetTypeComponent} from "./SetTypeComponent";
 import * as randomstring from "randomstring";
+import {SetTypeComponent} from "./SetTypeComponent";
 
 export class StringTypeComponent extends SetTypeComponent<string> {
     getName() {

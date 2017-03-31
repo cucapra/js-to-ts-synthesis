@@ -1,17 +1,18 @@
-import {TypeComponent} from "./TypeComponent";
 import {Validator} from "../Validator";
+import {pair, TypeComponent} from "./TypeComponent";
 
-export abstract class BoundedValueTypeComponent<T> implements TypeComponent<T> {
-    private allowedValues: {value: T, allowed: boolean}[];
+// Uses a slightly more complex implementation to allow for booleans as well as null and undefined.
+export abstract class BoundedValueTypeComponent<T> implements TypeComponent<T, T> {
+    private allowedValues: [T, boolean][];
 
     constructor(allowedValues: T[]) {
-        this.allowedValues = allowedValues.map(e => ({value: e, allowed: false}));
+        this.allowedValues = allowedValues.map(e => pair(e, false));
     }
 
     include(value: T) {
         for (let entry of this.allowedValues) {
-            if (entry.value === value)
-                entry.allowed = true;
+            if (entry[0] === value)
+                entry[1] = true;
         }
         return this;
     }
@@ -19,41 +20,51 @@ export abstract class BoundedValueTypeComponent<T> implements TypeComponent<T> {
     includeType(other: this) {
         // Indexes should match here.
         for (let i = 0; i < this.allowedValues.length; i++) {
-            if (other.allowedValues[i].allowed)
-                this.allowedValues[i].allowed = true;
+            if (other.allowedValues[i][1])
+                this.allowedValues[i][1] = true;
         }
         return this;
     }
 
     includeAll() {
         for (let entry of this.allowedValues) {
-            entry.allowed = true;
+            entry[1] = true;
         }
         return this;
     }
 
     excludeAll() {
         for (let entry of this.allowedValues) {
-            entry.allowed = false;
+            entry[1] = false;
         }
         return this;
     }
 
     isTop() {
-        return this.allowedValues.every(entry => entry.allowed);
+        return this.allowedValues.every(entry => entry[1]);
+    }
+
+    isBottom() {
+        return this.allowedValues.every(entry => !entry[1]);
     }
 
     toDefinition() {
         if (this.isTop())
             return [this.getName()];
 
-        return this.allowedValues.filter(entry => entry.allowed).map(entry => this.nameFor(entry.value));
+        return this.allowedValues.filter(entry => entry[1]).map(entry => this.nameFor(entry[0]));
+    }
+
+    toConstraints() {
+        return this.allowedValues.filter(entry => entry[1]).map(entry => entry[0]);
     }
 
     generalize(validator: Validator) {
-        for (let entry of this.allowedValues) {
-            if (!entry.allowed && validator.validate({singleValue: true, value: () => entry.value}))
-                entry.allowed = true;
+        if (!this.isBottom()) {
+            for (let entry of this.allowedValues) {
+                if (!entry[1] && validator.validate({singleValue: true, value: () => entry[0]}))
+                    entry[1] = true;
+            }
         }
     }
 

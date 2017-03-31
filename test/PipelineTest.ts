@@ -1,7 +1,7 @@
 import * as assert from "assert";
-import * as path from "path";
 import * as fs from "fs";
 import * as mocha from "mocha-typescript";
+import * as path from "path";
 import * as tmp from "tmp";
 
 import {Pipeline} from "../Pipeline";

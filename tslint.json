@@ -53,6 +53,7 @@
             true,
             "spaces"
         ],
+        "no-inferrable-types": true,
         "no-eval": true,
         "no-internal-module": true,
         "no-trailing-whitespace": true,
@@ -64,6 +65,7 @@
             "check-open-brace",
             "check-whitespace"
         ],
+        "ordered-imports": true,
         "quotemark": [
             true,
             "double"

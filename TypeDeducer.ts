@@ -1,5 +1,5 @@
-import {Type} from "./Type";
 import {FunctionCalls} from "./ExecutionTracer";
+import {Type} from "./Type";
 
 export interface ArgumentType<T extends Type> {
     name: string;
