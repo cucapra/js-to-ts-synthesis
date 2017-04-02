@@ -2,9 +2,10 @@ import * as child_process from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
+import {Map} from "immutable";
 import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
 import {FunctionModule, Module, ModuleParameters, ObjectModule} from "./Module";
-import {FunctionTypeDefinition} from "./TypeDeducer";
+import {FunctionTypeDefinition, SourceFile} from "./TypeDeducer";
 
 export function definitionFor(func: FunctionTypeDefinition): string {
     let args: string[] = [];
@@ -90,20 +91,20 @@ export class Workspace {
         }
     }
 
-    exportTypeDefinitions(typeDefinitions: { [sourceFile: string]: FunctionTypeDefinition[] }, executions: { [functionName: string]: FunctionCalls }) {
+    exportTypeDefinitions(typeDefinitions: Map<SourceFile, FunctionTypeDefinition[]>, executions: Map<string, FunctionCalls>) {
         let typeTestsFile = path.join(this.directory, "tests.ts");
         let typeTestsFd = fs.openSync(typeTestsFile, "w");
 
-        for (let file in typeDefinitions) {
+        for (let file of typeDefinitions.keySeq().toArray()) {
             console.log(`Exporting types for ${file}`);
 
             let definitionFileNoExt = file.substr(0, file.length - 3);
             let definitionFd = fs.openSync(definitionFileNoExt + ".d.ts", "w");
-            for (let func of typeDefinitions[file]){
+            for (let func of typeDefinitions.get(file)){
                 fs.writeSync(definitionFd, definitionFor(func));
 
                 fs.writeSync(typeTestsFd, `import {${func.name}} from '${definitionFileNoExt}';\n`);
-                for (let call of executions[func.name].calls){
+                for (let call of executions.get(func.name).calls){
                     fs.writeSync(typeTestsFd, validatingTestFor(func, call));
                 }
             }

@@ -1,3 +1,4 @@
+import {Map} from "immutable";
 import {FunctionCalls} from "./ExecutionTracer";
 import {Type} from "./Type";
 
@@ -12,18 +13,18 @@ export interface FunctionTypeDefinition {
     returnValueType: Type;
 }
 
+export type SourceFile = string;
+
 export abstract class TypeDeducer {
-    getAllTypeDefinitions(executions: { [functionName: string]: FunctionCalls }): { [sourceFile: string]: FunctionTypeDefinition[] } {
-        let result: { [sourceFile: string]: FunctionTypeDefinition[] } = {};
-
-        for (let functionName in executions) {
-            let file = executions[functionName].file;
-            if (!(file in result))
-                result[file] = [];
-            result[file].push(this.getTypeFor(functionName, executions[functionName]));
-        }
-
-        return result;
+    getAllTypeDefinitions(executions: Map<string, FunctionCalls>): Map<SourceFile, FunctionTypeDefinition[]> {
+        return Map<SourceFile, FunctionTypeDefinition[]>().withMutations(result => {
+            for (let functionName of executions.keySeq().toArray()) {
+                let file = executions.get(functionName).file;
+                if (!result.has(file))
+                    result.set(file, []);
+                result.get(file).push(this.getTypeFor(functionName, executions.get(functionName)));
+            }
+        });
     }
 
     protected static argNames(calls: FunctionCalls): string[] {

@@ -1,3 +1,4 @@
+import {Map} from "immutable";
 import {ArgDef, argDefs} from "./StaticAnalysis";
 
 export interface ModuleParameters {
@@ -25,32 +26,33 @@ export class FunctionInfo {
 }
 
 export abstract class Module {
-    readonly exportedFunctions: {[functionName: string]: FunctionInfo} = {};
+    constructor(public readonly exportedFunctions: Map<string, FunctionInfo>) {
+    }
 }
 
 // Some modules just export a single function.
 export class FunctionModule extends Module {
     constructor(main: Function & {name: string}, parameters: ModuleParameters) {
-        super();
-        this.exportedFunctions[main.name] = new FunctionInfo(main.name, main, parameters.treatAllErrorsAsTypeErrors);
+        super(Map<string, FunctionInfo>([[main.name, new FunctionInfo(main.name, main, parameters.treatAllErrorsAsTypeErrors)]]));
     }
 }
 
 export class ObjectModule extends Module {
     constructor(main: object, parameters: ModuleParameters) {
-        super();
-        this.exportFunctions(main, [], parameters);
+        let exportedFunctions: [string, FunctionInfo][] = [];
+        ObjectModule.exportFunctions(exportedFunctions, main, [], parameters);
+        super(Map<string, FunctionInfo>(exportedFunctions));
     }
 
-    private exportFunctions(target: any, path: string[], parameters: ModuleParameters) {
+    private static exportFunctions(exportedFunctions: [string, FunctionInfo][], target: any, path: string[], parameters: ModuleParameters) {
         switch (typeof target) {
             case "function":
                 let name = path.join(".");
-                this.exportedFunctions[name] =  new FunctionInfo(name, target, parameters.treatAllErrorsAsTypeErrors);
+                exportedFunctions.push([name, new FunctionInfo(name, target, parameters.treatAllErrorsAsTypeErrors)]);
                 break;
             case "object":
                 for (let key in target) {
-                    this.exportFunctions(target[key], path.concat([key]), parameters);
+                    ObjectModule.exportFunctions(exportedFunctions, target[key], path.concat([key]), parameters);
                 }
                 break;
         }

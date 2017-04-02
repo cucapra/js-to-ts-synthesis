@@ -2,6 +2,7 @@ import { transformFileSync } from "babel-core";
 import * as fs from "fs";
 import * as path from "path";
 
+import {Map} from "immutable";
 import * as hooks from "./instrumentation/hooks";
 import {FunctionInfo} from "./Module";
 import {Workspace} from "./Workspace";
@@ -44,7 +45,7 @@ export class ExecutionTracer {
         this.workspace = workspace;
     }
 
-    trace(): { [functionName: string]: FunctionCalls } {
+    trace(): Map<string, FunctionCalls> {
         let exportedFunctions = this.workspace.getModule().exportedFunctions;
         let instrumentationOutputFile = path.join(this.workspace.directory, "instrumentation_output.txt");
 
@@ -63,7 +64,7 @@ export class ExecutionTracer {
         return this.readInstrumentationOutput(instrumentationOutputFile, exportedFunctions);
     }
 
-    private injectInstrumentation(sourceFile: string, hooks?: {instrumentationOutputFile: string, exportedFunctions: { [functionName: string]: FunctionInfo }}) {
+    private injectInstrumentation(sourceFile: string, hooks?: {instrumentationOutputFile: string, exportedFunctions: Map<string, FunctionInfo>}) {
         // Aran struggles with const expressions for some reason. Use babel to get rid of those.
         // Also gives us a smaller subset of JS to work with.
         let source = transformFileSync(sourceFile, {presets: ["env"]}).code;
@@ -75,7 +76,7 @@ export class ExecutionTracer {
             source =
 `
 var instrumentationOutputFile = '${hooks.instrumentationOutputFile}';
-var exportedFunctions = ${JSON.stringify(Object.keys(hooks.exportedFunctions))};
+var exportedFunctions = ${JSON.stringify(hooks.exportedFunctions.keySeq().toArray())};
 var mainFile = '${this.workspace.mainFile}';
 ${INSTRUMENTATION_CODE}
 ${source}
@@ -89,45 +90,45 @@ ${source}
         fs.appendFileSync(path.join(this.workspace.directory, ".eslintignore"), "\n**/*.js");
     }
 
-    private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: { [functionName: string]: FunctionInfo }): { [functionName: string]: FunctionCalls } {
-        let calls: { [filename: string]: FunctionCalls } = {};
+    private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: Map<string, FunctionInfo>): Map<string, FunctionCalls> {
 
-        let lrs = new LineReaderSync(instrumentationOutputFile);
+        let calls = Map<string, FunctionCalls>().withMutations(calls => {
+            let lrs = new LineReaderSync(instrumentationOutputFile);
 
-        while (true) {
-            let line = lrs.readline();
-            if (line == null) break;
-            let lineObj = <hooks.InstrumentationLine>JSON.parse(line);
+            while (true) {
+                let line = lrs.readline();
+                if (line == null) break;
+                let lineObj = <hooks.InstrumentationLine>JSON.parse(line);
 
-            switch (lineObj.type) {
-                case "FunctionCall":
-                    // If this is the first instance of this function, pull in the arg names as well.
-                    if (!(lineObj.name in calls)) {
-                        calls[lineObj.name] = {file: lineObj.file, functionInfo: exportedFunctions[lineObj.name], calls: []};
-                    }
-                    calls[lineObj.name].calls.push({args: lineObj.args, returnValue: lineObj.returnValue});
-                    break;
-                case "UnbalancedEntryExit":
-                    throw new UnbalancedEntryExitError(lineObj);
+                switch (lineObj.type) {
+                    case "FunctionCall":
+                        // If this is the first instance of this function, pull in the arg names as well.
+                        if (!calls.has(lineObj.name))
+                            calls.set(lineObj.name, {file: lineObj.file, functionInfo: exportedFunctions.get(lineObj.name), calls: []});
+                        calls.get(lineObj.name).calls.push({args: lineObj.args, returnValue: lineObj.returnValue});
+                        break;
+                    case "UnbalancedEntryExit":
+                        throw new UnbalancedEntryExitError(lineObj);
+                }
             }
-        }
+        });
 
-        console.log(`Read instrumentation for ${Object.keys(calls).length} functions.`);
+        console.log(`Read instrumentation for ${calls.size} functions.`);
 
         this.checkCoverage(calls, exportedFunctions);
 
         return calls;
     }
 
-    private checkCoverage(calls: { [functionName: string]: FunctionCalls }, exportedFunctions: { [functionName: string]: FunctionInfo }) {
+    private checkCoverage(calls: Map<string, FunctionCalls>, exportedFunctions: Map<string, FunctionInfo>) {
         let exportedFunctionsWithNoTests = 0;
-        for (let f in exportedFunctions) {
-            if (!(f in calls)) {
+        for (let f in exportedFunctions.keySeq().toArray()) {
+            if (!calls.has(f)) {
                 console.log(`Note: ${f} has no tests, and thus will have no type signature.`);
                 exportedFunctionsWithNoTests++;
             }
         }
         if (exportedFunctionsWithNoTests > 0)
-            console.log(`${exportedFunctionsWithNoTests}/${Object.keys(exportedFunctions).length} have no tests.`);
+            console.log(`${exportedFunctionsWithNoTests}/${exportedFunctions.size} have no tests.`);
     }
 }
