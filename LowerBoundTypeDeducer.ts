@@ -3,17 +3,17 @@ import {Type} from "./Type";
 import {FunctionTypeDefinition, TypeDeducer} from "./TypeDeducer";
 
 export class LowerBoundTypeDeducer extends TypeDeducer {
-    getTypeFor(name: string, calls: FunctionCalls): FunctionTypeDefinition {
-        let argTypes = TypeDeducer.argNames(calls).map(name => ({name: name, type: new Type("bottom")}));
+    getTypeFor(calls: FunctionCalls): FunctionTypeDefinition {
+        let argTypes = calls.info.args.map(a => new Type("bottom"));
         let returnValueType = new Type("bottom");
         for (let call of calls.calls){
             call.args.forEach((arg, i) => {
-                argTypes[i].type.extend(arg);
+                argTypes[i].extend(arg);
             });
 
             returnValueType.extend(call.returnValue);
         }
 
-        return {name: name, argTypes: argTypes, returnValueType: returnValueType};
+        return new FunctionTypeDefinition(calls, argTypes, returnValueType);
     }
 }

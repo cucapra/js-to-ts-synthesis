@@ -8,7 +8,6 @@ import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
 import {NullTypeDeducer} from "../NullTypeDeducer";
 import {Pipeline} from "../Pipeline";
 import {SimpleTypeDeducer} from "../SimpleTypeDeducer";
-import {UpperBoundTypeDeducer} from "../UpperBoundTypeDeducer";
 
 const TEST_TIMEOUT_WINDOW = 60000;
 
@@ -21,6 +20,7 @@ class PipelineTest {
         tmp.setGracefulCleanup();
     }
 
+
     @mocha.test
     @mocha.timeout(300000)
     testBadTypeDeducer() {
@@ -29,6 +29,7 @@ class PipelineTest {
 
         assert.throws(() => {pipeline.run(); });
     }
+
     @mocha.test
     @mocha.timeout(300000)
     testLowerBoundTypeDeducer() {
@@ -39,16 +40,17 @@ class PipelineTest {
         assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), GIT_URL_PARSE_EXPECTED_LOWER);
     }
 
+/*
     @mocha.test
     @mocha.timeout(300000)
     testUpperBoundTypeDeducer() {
         let workingDir = this.tempFolder();
-        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse", workingDir, TEST_TIMEOUT_WINDOW, new UpperBoundTypeDeducer(), {treatAllErrorsAsTypeErrors: true});
+        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse", workingDir, TEST_TIMEOUT_WINDOW, new UpperBoundTypeDeducer(), {treatAllErrorsAsTypeErrors: true}, true);
         pipeline.run();
 
         assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), "export declare function gitUrlParse(url: string): {};\n");
     }
-
+*/
     @mocha.test
     @mocha.timeout(300000)
     testSimpleTypeDeducer() {
@@ -59,7 +61,6 @@ class PipelineTest {
         assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), GIT_URL_PARSE_EXPECTED_SIMPLE);
     }
 
-    /*
     @mocha.test
     @mocha.timeout(300000)
     testModuleThatExportsAnObject() {
@@ -68,7 +69,7 @@ class PipelineTest {
         pipeline.run();
 
         assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), "export declare function gitUrlParse(url: string): {};\n");
-    }*/
+    }
 
     private tempFolder(): string {
         return tmp.dirSync().name;

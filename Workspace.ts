@@ -1,33 +1,19 @@
 import * as child_process from "child_process";
 import * as fs from "fs";
 import * as path from "path";
+import {injectInstrumentation, injectInstrumentationForTest} from "./Instrumentation";
+import {FunctionModule, FunctionsMap, Module, ModuleParameters, ObjectModule} from "./Module";
+import {FunctionTypeDefinition} from "./TypeDeducer";
 
-import {Map} from "immutable";
-import {FunctionCall, FunctionCalls} from "./ExecutionTracer";
-import {FunctionModule, Module, ModuleParameters, ObjectModule} from "./Module";
-import {FunctionTypeDefinition, SourceFile} from "./TypeDeducer";
-
-export function definitionFor(func: FunctionTypeDefinition): string {
-    let args: string[] = [];
-
-    func.argTypes.forEach(arg => {
-        args.push(`${arg.name}: ${arg.type.toDefinition()}`);
-    });
-
-    return `export declare function ${func.name}(${args.join(", ")}): ${func.returnValueType.toDefinition()};\n`;
-}
-
-function validatingTestFor(func: FunctionTypeDefinition, call: FunctionCall): string {
-    let test = "";
-    let args: string[] = [];
-    call.args.forEach((arg, i) => {
-        test += `var ${func.argTypes[i].name}: ${func.argTypes[i].type.toDefinition()} = ${JSON.stringify(arg)};\n`;
-        args.push(func.argTypes[i].name);
-    });
-
-    test += `var result: ${func.returnValueType.toDefinition()} = ${func.name}(${args.join(", ")});\n`;
-    return `(function (){\n${test}\n})();\n`;
-}
+// Needed so that this can require the module.
+(<any>global)._meta_ = {
+    apply: function (fct: Function, thisObj: any, args: any[]) {
+        return fct.apply(thisObj, args);
+    },
+    return: function (returnValue: any) {
+        return returnValue;
+    }
+};
 
 function testDirectory(dir: string): string[] | undefined {
     return fs.existsSync(dir) ? fs.readdirSync(dir).map(file => path.join(dir, file)) : undefined;
@@ -42,14 +28,12 @@ export class Workspace {
     testFiles: string[];
     mainFile: string;
     testTimeoutWindow: number;
-    moduleParameters: ModuleParameters;
+    module: Module;
+    instrumentationOutputFile: string;
+
     constructor(directory: string, repoUri: string, testTimeoutWindow: number, moduleParameters: ModuleParameters) {
         console.log(`Working directory is ${directory}`);
         this.directory = directory;
-
-        // Needed so that instrumented libraries can find the instrumentation code.
-        process.env.INSTRUMENTATION_SRC = path.join(__dirname, "instrumentation");
-        console.log(`INSTRUMENTATION_SRC=${process.env.INSTRUMENTATION_SRC}`);
 
         // Clone from the repo.
         this.runCommand(`git clone ${repoUri} .`);
@@ -66,23 +50,31 @@ export class Workspace {
         else
              throw Error("Cannot find test directory");
 
-        let module = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf-8"));
-        this.mainFile = path.join(directory, module.main || module.files[0]);
+        let packageJson = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf-8"));
+        this.mainFile = path.join(directory, packageJson.main || packageJson.files[0]);
 
-        this.testTimeoutWindow = testTimeoutWindow;
-        this.moduleParameters = moduleParameters;
-    }
+        injectInstrumentation(this.mainFile);
 
-    getModule(): Module {
         let main = require(this.mainFile);
         switch (typeof main) {
             case "function":
-                return new FunctionModule(main, this.moduleParameters);
+                this.module = new FunctionModule(main, this.mainFile, moduleParameters);
+                break;
             case "object":
-                return new ObjectModule(main, this.moduleParameters);
+                this.module = new ObjectModule(main, this.mainFile, moduleParameters);
+                break;
             default:
                 throw new Error(`${this.mainFile} does not export a function or object`);
         }
+
+        this.instrumentationOutputFile = path.join(this.directory, "instrumentation_output.txt");
+
+        for (let testFile of this.testFiles) {
+            if (path.extname(testFile) === ".js")
+                injectInstrumentationForTest(testFile, this.instrumentationOutputFile, this.module.exportedFunctions);
+        }
+
+        this.testTimeoutWindow = testTimeoutWindow;
     }
 
     runTests() {
@@ -91,7 +83,7 @@ export class Workspace {
         }
     }
 
-    exportTypeDefinitions(typeDefinitions: Map<SourceFile, FunctionTypeDefinition[]>, executions: Map<string, FunctionCalls>) {
+    exportTypeDefinitions(typeDefinitions: FunctionsMap<FunctionTypeDefinition>) {
         let typeTestsFile = path.join(this.directory, "tests.ts");
         let typeTestsFd = fs.openSync(typeTestsFile, "w");
 
@@ -100,12 +92,13 @@ export class Workspace {
 
             let definitionFileNoExt = file.substr(0, file.length - 3);
             let definitionFd = fs.openSync(definitionFileNoExt + ".d.ts", "w");
-            for (let func of typeDefinitions.get(file)){
-                fs.writeSync(definitionFd, definitionFor(func));
 
-                fs.writeSync(typeTestsFd, `import {${func.name}} from '${definitionFileNoExt}';\n`);
-                for (let call of executions.get(func.name).calls){
-                    fs.writeSync(typeTestsFd, validatingTestFor(func, call));
+            for (let func of typeDefinitions.get(file).valueSeq().toArray()) {
+                fs.writeSync(definitionFd, func.definitionFor());
+
+                fs.writeSync(typeTestsFd, `import {${func.calls.info.name}} from '${definitionFileNoExt}';\n`);
+                for (let test of func.validatingTests()){
+                    fs.writeSync(typeTestsFd, test);
                 }
             }
             fs.closeSync(definitionFd);

@@ -35,7 +35,7 @@ export class Pipeline {
         let workspace = new Workspace(this.workingDir, this.repoUri, this.testTimeoutWindow, this.moduleParameters);
         let executions = new ExecutionTracer(workspace).trace();
         let types = this.typeDeducer.getAllTypeDefinitions(executions);
-        workspace.exportTypeDefinitions(types, executions);
+        workspace.exportTypeDefinitions(types);
     }
 }
 

@@ -3,23 +3,17 @@ import * as fs from "fs";
 // _meta_ is the global this sets later.
 declare var _meta_: {};
 
-// These two are assumed to be there.
+// These are assumed to be there.
+declare var tagFor: (fct: Function) => number;
 declare var instrumentationOutputFile: string;
-declare var exportedFunctions: string[];
-declare var mainFile: string;
-
-// Not sure why name doesn't appear in the Function class. This works fine in node.
-type FunctionWithName = Function & {name: string};
+declare var exportedFunctions: number[];
 
 export interface FunctionEntry {
-    name: string;
-    file: string;
-    args: any; /*Dictionary<number, any>*/
+    tag: number;
+    args: any[];
 }
 
 export interface FunctionExit {
-    name: string;
-    file: string;
     returnValue: any;
 }
 
@@ -45,29 +39,29 @@ export type InstrumentationLine = FunctionCall | UnbalancedEntryExit;
     let callStack: FunctionEntry[] = [];
 
     _meta_ = {
-        apply: function (fct: FunctionWithName, thisObj: any, args: any[]) {
-            if (exportedFunctions.indexOf(fct.name) > -1) {
-                callStack.push({name: fct.name, file: mainFile, args: args});
+        apply: function (fct: Function, thisObj: any, args: any[]) {
+            let tag = tagFor(fct);
+            if (exportedFunctions.indexOf(tag) > -1) {
+                callStack.push({tag: tag, args: args});
             }
             return fct.apply(thisObj, args);
         },
         return: function (returnValue: any) {
-            let caller = <FunctionWithName>arguments.callee.caller;
-            let exit = {name: caller.name, file: mainFile, returnValue: returnValue};
-            if (exportedFunctions.indexOf(caller.name) > -1) {
+            let tag = tagFor(arguments.callee.caller);
+            // let exit = {name: caller.name, file: mainFile, returnValue: returnValue};
+            if (exportedFunctions.indexOf(tag) > -1) {
                 while (true) {
                     let entry = callStack.pop();
                     if (entry === undefined) {
-                        writeInstrumentationLine({type: "UnbalancedEntryExit", exit: exit});
+                        writeInstrumentationLine({type: "UnbalancedEntryExit", exit: {returnValue: returnValue}});
                         break;
                     }
-                    else if (entry.name === exit.name && entry.file === exit.file) {
+                    else if (entry.tag = tag) {
                         writeInstrumentationLine({
                             type: "FunctionCall",
-                            name: entry.name,
-                            file: entry.file,
+                            tag: tag,
                             args: entry.args,
-                            returnValue: exit.returnValue});
+                            returnValue: returnValue});
                         break;
                     }
                 }

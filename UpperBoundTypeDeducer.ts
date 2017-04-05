@@ -3,20 +3,16 @@ import {Type} from "./Type";
 import {FunctionTypeDefinition, TypeDeducer} from "./TypeDeducer";
 
 export class UpperBoundTypeDeducer extends TypeDeducer {
-    getTypeFor(name: string, calls: FunctionCalls): FunctionTypeDefinition {
-        let argChecks: {[name: string]: {"===": string[], "!==": string[]}} = {};
-        for (let a of calls.functionInfo.args){
-            argChecks[a.name] = a.typeofChecks;
-        }
+    getTypeFor(calls: FunctionCalls): FunctionTypeDefinition {
 
-        let argTypes = TypeDeducer.argNames(calls).map(name => {
-            if (argChecks[name]["==="].length > 0)
-                return {name: name, type: new Type("bottom").include(argChecks[name]["==="]).exclude(argChecks[name]["!=="])};
+        let argTypes = calls.info.args.map(arg => {
+            if (arg.typeofChecks["==="].length > 0)
+                return new Type("bottom").include(arg.typeofChecks["==="]).exclude(arg.typeofChecks["!=="]);
             else
-                return {name: name, type: new Type("top").exclude(argChecks[name]["!=="])};
+                return new Type("top").exclude(arg.typeofChecks["!=="]);
         });
         let returnValueType = new Type("top");
 
-        return {name: name, argTypes: argTypes, returnValueType: returnValueType};
+        return new FunctionTypeDefinition(calls, argTypes, returnValueType);
     }
 }

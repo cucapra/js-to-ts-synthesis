@@ -20,6 +20,17 @@ function typeofChecks(node: FunctionExpression): {[name: string]: {"===": string
     let result: {[name: string]: {"===": string[], "!==": string[]}} = {};
 
     for (let s of node.body.body){
+
+        // Ignore the id
+        if (s.type === "ExpressionStatement"
+            && s.expression.type === "UnaryExpression"
+            && s.expression.operator === "void"
+            && s.expression.argument.type === "Literal"
+            && typeof(s.expression.argument.value) === "string"
+            && s.expression.argument.value.indexOf("id=") === 0)
+
+            continue;
+
         if (s.type !== "IfStatement")
             break; // Have to stop here. Aliasing could cause this to be incorrect.
 

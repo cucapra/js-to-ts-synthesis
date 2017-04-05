@@ -1,46 +1,34 @@
-import {Map} from "immutable";
+
 import {FunctionCalls} from "./ExecutionTracer";
+import {FunctionsMap, val} from "./Module";
 import {Type} from "./Type";
 
-export interface ArgumentType<T extends Type> {
-    name: string;
-    type: T;
-}
+export class FunctionTypeDefinition {
+    constructor(public calls: FunctionCalls, public argTypes: Type[], public returnValueType: Type) {
+    }
 
-export interface FunctionTypeDefinition {
-    name: string;
-    argTypes: ArgumentType<Type>[];
-    returnValueType: Type;
-}
+    definitionFor() {
+        let args = this.argTypes.map((arg, i) => `${this.calls.info.args[i].name}: ${arg.toDefinition()}`);
+        return `export declare function ${this.calls.info.name}(${args.join(", ")}): ${this.returnValueType.toDefinition()};\n`;
+    }
 
-export type SourceFile = string;
-
-export abstract class TypeDeducer {
-    getAllTypeDefinitions(executions: Map<string, FunctionCalls>): Map<SourceFile, FunctionTypeDefinition[]> {
-        return Map<SourceFile, FunctionTypeDefinition[]>().withMutations(result => {
-            for (let functionName of executions.keySeq().toArray()) {
-                let file = executions.get(functionName).file;
-                if (!result.has(file))
-                    result.set(file, []);
-                result.get(file).push(this.getTypeFor(functionName, executions.get(functionName)));
+    validatingTests() {
+        return this.calls.calls.map(call => {
+            let test = "";
+            for (let i = 0; i < call.args.length; i++) {
+                test += `var ${this.calls.info.args[i].name}: ${this.argTypes[i].toDefinition()} = ${JSON.stringify(call.args[i])};\n`;
             }
+
+            test += `var result: ${this.returnValueType.toDefinition()} = ${this.calls.info.name}(${this.calls.info.args.map(d => d.name).join(", ")});\n`;
+            return `(function (){\n${test}\n})();\n`;
         });
     }
+}
 
-    protected static argNames(calls: FunctionCalls): string[] {
-        let numArgs = 0;
-        for (let call of calls.calls){
-            numArgs = Math.max(numArgs, call.args.length);
-        }
-
-        let argTypes: string[] = [];
-        for (let i = 0; i < numArgs; i++) {
-            // Get the name if it's provided. Otherwise make one up.
-            let name = (i < calls.functionInfo.args.length) ? calls.functionInfo.args[i].name : `arg${i}`;
-            argTypes.push(name);
-        }
-        return argTypes;
+export abstract class TypeDeducer {
+    getAllTypeDefinitions(executions: FunctionsMap<FunctionCalls>): FunctionsMap<FunctionTypeDefinition> {
+        return executions.map(m => val(m).map(functionCalls => this.getTypeFor(val(functionCalls))).toMap()).toMap();
     }
 
-    protected abstract getTypeFor(name: string, calls: FunctionCalls): FunctionTypeDefinition;
+    protected abstract getTypeFor(calls: FunctionCalls): FunctionTypeDefinition;
 }
