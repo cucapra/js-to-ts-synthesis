@@ -1,7 +1,7 @@
-
 import {FunctionCalls} from "./ExecutionTracer";
 import {FunctionsMap, val} from "./Module";
 import {Type} from "./Type";
+import {RoundUpParameters} from "./type_components/TypeComponent";
 
 export class FunctionTypeDefinition {
     constructor(public calls: FunctionCalls, public argTypes: Type[], public returnValueType: Type) {
@@ -26,6 +26,8 @@ export class FunctionTypeDefinition {
 }
 
 export abstract class TypeDeducer {
+    constructor(protected parameters: RoundUpParameters) {}
+
     getAllTypeDefinitions(executions: FunctionsMap<FunctionCalls>): FunctionsMap<FunctionTypeDefinition> {
         return executions.map(m => val(m).map(functionCalls => this.getTypeFor(val(functionCalls))).toMap()).toMap();
     }

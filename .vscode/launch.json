@@ -20,7 +20,9 @@
                 "--timeout",
                 "999999",
                 "--colors",
-                "${workspaceRoot}/test"
+                "${workspaceRoot}/test",
+                "--grep",
+                "TypeDeducerTest"
             ],
             "internalConsoleOptions": "openOnSessionStart"
         },

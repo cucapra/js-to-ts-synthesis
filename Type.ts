@@ -1,4 +1,3 @@
-
 import {ArrayOrTupleTypeComponent} from "./type_components/ArrayOrTupleTypeComponent";
 import {BooleanTypeComponent} from "./type_components/BooleanTypeComponent";
 import {FunctionTypeComponent} from "./type_components/FunctionTypeComponent";
@@ -6,6 +5,7 @@ import {NullTypeComponent} from "./type_components/NullTypeComponent";
 import {NumberTypeComponent} from "./type_components/NumberTypeComponent";
 import {ObjectTypeComponent} from "./type_components/ObjectTypeComponent";
 import {StringTypeComponent} from "./type_components/StringTypeComponent";
+import {RoundUpParameters} from "./type_components/TypeComponent";
 import {UndefinedTypeComponent} from "./type_components/UndefinedTypeComponent";
 import {Validator} from "./Validator";
 
@@ -25,37 +25,25 @@ class TypeDefinitionBuilder {
 }
 
 export class Type {
-    private nullType: NullTypeComponent;
-    private undefinedType: UndefinedTypeComponent;
-    private booleanType: BooleanTypeComponent;
-    private numberType: NumberTypeComponent;
-    private stringType: StringTypeComponent;
-    private functionType: FunctionTypeComponent;
-    private arrayOrTupleType: ArrayOrTupleTypeComponent;
-    private objectType: ObjectTypeComponent;
+    private nullType = new NullTypeComponent();
+    private undefinedType = new UndefinedTypeComponent();
+    private booleanType = new BooleanTypeComponent();
+    private numberType = new NumberTypeComponent();
+    private stringType = new StringTypeComponent();
+    private functionType = new FunctionTypeComponent();
+    private arrayOrTupleType = new ArrayOrTupleTypeComponent();
+    private objectType = new ObjectTypeComponent();
 
     constructor(of: "bottom"|"top") {
-        switch (of) {
-            case "bottom":
-                this.nullType = new NullTypeComponent();
-                this.undefinedType = new UndefinedTypeComponent();
-                this.booleanType = new BooleanTypeComponent();
-                this.numberType = new NumberTypeComponent();
-                this.stringType = new StringTypeComponent();
-                this.functionType = new FunctionTypeComponent();
-                this.arrayOrTupleType = new ArrayOrTupleTypeComponent();
-                this.objectType = new ObjectTypeComponent();
-                break;
-            case "top":
-                this.nullType = new NullTypeComponent().includeAll();
-                this.undefinedType = new UndefinedTypeComponent().includeAll();
-                this.booleanType = new BooleanTypeComponent().includeAll();
-                this.numberType = new NumberTypeComponent().includeAll();
-                this.stringType = new StringTypeComponent().includeAll();
-                this.functionType = new FunctionTypeComponent().includeAll();
-                this.arrayOrTupleType = new ArrayOrTupleTypeComponent().includeAll();
-                this.objectType = new ObjectTypeComponent().includeAll();
-                break;
+        if (of === "top") {
+            this.nullType.includeAll();
+            this.undefinedType.includeAll();
+            this.booleanType.includeAll();
+            this.numberType.includeAll();
+            this.stringType.includeAll();
+            this.functionType.includeAll();
+            this.arrayOrTupleType.includeAll();
+            this.objectType.includeAll();
         }
     }
 
@@ -184,16 +172,29 @@ export class Type {
         return this;
     }
 
-    generalize(validator: Validator) {
-        this.nullType.generalize(validator);
-        this.undefinedType.generalize(validator);
-        this.booleanType.generalize(validator);
-        this.numberType.generalize(validator);
-        this.stringType.generalize(validator);
-        this.functionType.generalize(validator);
-        this.arrayOrTupleType.generalize(validator);
-        this.objectType.generalize(validator);
+    canRoundUp(validator: Validator, topType: Type, parameters: RoundUpParameters) {
+        return this.nullType.canRoundUp(validator, topType.nullType, parameters)
+            && this.undefinedType.canRoundUp(validator, topType.undefinedType, parameters)
+            && this.booleanType.canRoundUp(validator, topType.booleanType, parameters)
+            && this.numberType.canRoundUp(validator, topType.numberType, parameters)
+            && this.stringType.canRoundUp(validator, topType.stringType, parameters)
+            && this.functionType.canRoundUp(validator, topType.functionType, parameters)
+            && this.arrayOrTupleType.canRoundUp(validator, topType.arrayOrTupleType, parameters)
+            && this.objectType.canRoundUp(validator, topType.objectType, parameters);
     }
+
+    roundUp(validator: Validator, parameters: RoundUpParameters) {
+        this.nullType.roundUp(validator, parameters);
+        this.undefinedType.roundUp(validator, parameters);
+        this.booleanType.roundUp(validator, parameters);
+        this.numberType.roundUp(validator, parameters);
+        this.stringType.roundUp(validator, parameters);
+        this.functionType.roundUp(validator, parameters);
+        this.arrayOrTupleType.roundUp(validator, parameters);
+        this.objectType.roundUp(validator, parameters);
+    }
+
+
 
 /*
     private static mergeIntoTupleLowerBound(target: Type[], source: any[]) {

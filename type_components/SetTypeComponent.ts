@@ -1,16 +1,13 @@
 import {Set} from "immutable";
 import {Validator} from "../Validator";
-import {TypeComponent} from "./TypeComponent";
+import {RoundUpParameters, TypeComponent} from "./TypeComponent";
 
-type AnyConstraint = undefined;
-
-export abstract class SetTypeComponent<T> implements TypeComponent<T, T | AnyConstraint> {
+export abstract class SetTypeComponent<T> implements TypeComponent<T> {
     private values: true | Set<T> = Set<T>().asMutable();
 
     include(value: T) {
         if (this.values !== true)
             this.values.add(value);
-        return this;
     }
 
     includeType(other: this) {
@@ -20,18 +17,14 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T, T | AnyCon
         else if (this.values !== true) {
             this.values.merge(other.values);
         }
-
-        return this;
     }
 
     includeAll() {
         this.values = true;
-        return this;
     }
 
     excludeAll() {
         this.values = Set<T>().asMutable();
-        return this;
     }
 
     isTop() {
@@ -48,14 +41,22 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T, T | AnyCon
         return this.values.toArray().map(n => JSON.stringify(n));
     }
 
-    toConstraints() {
+    canRoundUp(validator: Validator, superType: this, parameters: RoundUpParameters) {
         if (this.values === true)
-            return [undefined];
-        return this.values.toArray();
+            return true;
+        if (!parameters.roundUpFromBottom && this.isBottom() && !superType.isBottom())
+            return false;
+
+        let myValues = this.values;
+
+        return superType.values === true
+            ? validator.validate({value: () => this.valueNotInSet()}) // Check a few random values values outside of this set
+              /* TODO use subtract */
+            : superType.values.toArray().filter(el => !myValues.has(el)).every(value => validator.validate({singleValue: true, value: () => value})); // Check all values in the top type, but not in this set.
     }
 
-    generalize(validator: Validator) {
-        if (!this.isBottom() && !this.isTop() && validator.validate({value: () => this.valueNotInSet()}))
+    roundUp(validator: Validator, parameters: RoundUpParameters) {
+        if ((parameters.roundUpFromBottom || !this.isBottom()) && this.values !== true && validator.validate({value: () => this.valueNotInSet()}))
             this.values = true;
     }
 

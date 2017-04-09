@@ -12,12 +12,17 @@ class TagFunctionsTest {
     @mocha.timeout(300000)
     testTagFunctions() {
         {
-            let tagged = tagFunctions("function f() {}");
+            let tagged = tagFunctions("function f() {};");
             assert.include(tagged, "void 'id=1'");
             assert.strictEqual(tagFor(asFunction("f", tagged)), 1);
         }
         {
-            let tagged = tagFunctions("f = function(){}");
+            let tagged = tagFunctions("f = function(){};");
+            assert.include(tagged, "void 'id=1'");
+            assert.strictEqual(tagFor(asFunction("f", tagged)), 1);
+        }
+        {
+            let tagged = tagFunctions("obj = {f: function(){}}; f = obj.f;");
             assert.include(tagged, "void 'id=1'");
             assert.strictEqual(tagFor(asFunction("f", tagged)), 1);
         }

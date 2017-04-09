@@ -7,13 +7,22 @@ export function pair<T1, T2>(k: T1, v: T2): [T1, T2] {
     return [k, v];
 }
 
-export interface TypeComponent<T, ConstraintT> {
-    include(value: T): this;
-    includeType(type: this): this;
-    includeAll(): this;
-    excludeAll(): this;
+export interface RoundUpParameters {
+    /**
+     * If this flag is set, type components will always try to round up, even if so value was seen.
+     */
+    roundUpFromBottom: boolean;
+}
+
+export interface TypeComponent<T> {
+    include(value: T): void;
+    includeType(type: this): void;
+    includeAll(): void;
+    excludeAll(): void;
 
     isTop(): boolean;
+
+    isBottom(): boolean;
 
     /**
      * Returns an array of options. Concatenating these together with a "|" gives the Typescript definition for this type component.
@@ -21,12 +30,10 @@ export interface TypeComponent<T, ConstraintT> {
     toDefinition(): Variants;
 
     /**
-     * Returns a set of constraints, one of which that must be met, for a value to satisfy this type.
-     * If all of these are falsified, a value cannot be of this type.
-     *
-     * For example, "a"|"b" has two constraints, x: "a" and x: "b"
+     * Tries values that are valid values of `superType` but not of this type.
+     * Return true if (heuristically) the two types can be considered equivalent.
      */
-    // toConstraints(): ConstraintT[];
+    canRoundUp(validator: Validator, superType: this, parameters: RoundUpParameters): boolean;
 
-    generalize(validator: Validator): void;
+    roundUp(validator: Validator, parameters: RoundUpParameters): void;
 }
