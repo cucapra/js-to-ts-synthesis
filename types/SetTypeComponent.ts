@@ -1,30 +1,30 @@
-import {Set} from "immutable";
+import {List, Set} from "immutable";
 import {Validator} from "../Validator";
 import {RoundUpParameters, TypeComponent} from "./TypeComponent";
 
 export abstract class SetTypeComponent<T> implements TypeComponent<T> {
-    private values: true | Set<T> = Set<T>().asMutable();
+    constructor(private readonly values: true | Set<T>) {
+    }
+
+    abstract newInstance(values: true | Set<T>): this;
 
     include(value: T) {
-        if (this.values !== true)
-            this.values.add(value);
+        return (this.values === true) ? this : this.newInstance(this.values.add(value));
     }
 
     includeType(other: this) {
-        if (other.values === true) {
-            this.values = true;
+        if (other.values === true || this.values === true) {
+            return this.newInstance(true);
         }
-        else if (this.values !== true) {
-            this.values.merge(other.values);
-        }
+        return this.newInstance(this.values.merge(other.values));
     }
 
     includeAll() {
-        this.values = true;
+        return this.newInstance(true);
     }
 
     excludeAll() {
-        this.values = Set<T>().asMutable();
+        return this.newInstance(Set<T>());
     }
 
     isTop() {
@@ -57,7 +57,8 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
 
     roundUp(validator: Validator, parameters: RoundUpParameters) {
         if ((parameters.roundUpFromBottom || !this.isBottom()) && this.values !== true && validator.validate({value: () => this.valueNotInSet()}))
-            this.values = true;
+            return this.newInstance(true);
+        return this;
     }
 
     private valueNotInSet(): T {
@@ -74,5 +75,9 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
 
     protected abstract getName(): string;
     protected abstract randomValue(): T;
+
+    ascendingPaths(params: [Validator, RoundUpParameters]) {
+        return List<this>();
+    }
 
 }

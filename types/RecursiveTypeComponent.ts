@@ -1,15 +1,14 @@
 import {List, Map} from "immutable";
-import {val} from "../Module";
-import {Type} from "../Type";
 import {Validator} from "../Validator";
+import {Type} from "./Type";
 import {RoundUpParameters, TypeComponent} from "./TypeComponent";
 
 // Use this to group tuples together.
 // Make sure these are sorted and immutable so they map be used as the key to a map
-type IndexForTupleLike<IndexT> = List<IndexT>;
+export type IndexForTupleLike<IndexT> = List<IndexT>;
 
 // The entries in this array should correspond to the entries in the IndexForTupleLike
-type TupleType = List<Type>;
+export type TupleType = List<Type>;
 
 export abstract class RecursiveTypeComponent<IndexT extends number|string, T> implements TypeComponent<T> {
     /**
@@ -20,11 +19,10 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
      * This common implementation supports arrays/tuples and objects.
      * In general, this can be a union of these, or the top type (any[] or object)
      */
-    private allowedTypes: true | { arrayLike: Type[], tupleLike: Map<IndexForTupleLike<IndexT>, TupleType[]>} = this.empty();
-
-    private empty() {
-        return {arrayLike: [], tupleLike: Map<IndexForTupleLike<IndexT>, TupleType[]>().asMutable()};
+    constructor(private readonly allowedTypes: true | { readonly arrayLike: List<Type>, tupleLike: Map<IndexForTupleLike<IndexT>, List<TupleType>>}) {
     }
+
+    abstract newInstance(allowedTypes: true | { readonly arrayLike: List<Type>, tupleLike: Map<IndexForTupleLike<IndexT>, List<TupleType>>}): this;
 
     protected abstract typeFor(value: T): /* Sorted by index */ [IndexT, Type][];
     protected abstract definitionOfTopType(): string;
@@ -34,40 +32,50 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     protected abstract emptyValue(): T;
 
     include(value: T) {
-        if (this.allowedTypes !== true) {
-            let type = this.typeFor(value);
-            let indices = List(type.map(e => e[0]));
-            let types = List(type.map(e => e[1]));
-            if (!this.allowedTypes.tupleLike.has(indices))
-                this.allowedTypes.tupleLike.set(indices, []);
-            this.allowedTypes.tupleLike.get(indices).push(types);
-        }
+        if (this.allowedTypes === true)
+            return this;
+
+        let type = this.typeFor(value);
+        let indices = List(type.map(e => e[0]));
+        let types = List(type.map(e => e[1]));
+        let tupleLike = this.allowedTypes.tupleLike;
+        if (!tupleLike.has(indices))
+            tupleLike = tupleLike.set(indices, List<TupleType>());
+        tupleLike = tupleLike.update(indices, t => t.push(types));
+
+        return this.newInstance({arrayLike: this.allowedTypes.arrayLike, tupleLike: tupleLike});
     }
 
     includeType(other: this) {
         if (other.allowedTypes === true) {
-            this.allowedTypes = true;
+            return this.newInstance(true);
         }
         else if (this.allowedTypes !== true) {
-            for (let entry of other.allowedTypes.arrayLike) {
-                this.allowedTypes.arrayLike.push(entry);
+            let arrayLike = this.allowedTypes.arrayLike;
+            let tupleLike = this.allowedTypes.tupleLike;
+
+            for (let entry of other.allowedTypes.arrayLike.toArray()) {
+                arrayLike = arrayLike.push(entry);
             }
             for (let key of other.allowedTypes.tupleLike.keySeq().toArray()) {
                 if (!this.allowedTypes.tupleLike.has(key))
-                    this.allowedTypes.tupleLike.set(key, []);
-                for (let entry of other.allowedTypes.tupleLike.get(key)) {
-                    this.allowedTypes.tupleLike.get(key).push(entry);
+                    tupleLike = tupleLike.set(key, List<TupleType>());
+                for (let entry of other.allowedTypes.tupleLike.get(key).toArray()) {
+                    tupleLike = tupleLike.update(key, a => a.push(entry)); ;
                 }
             }
+            return this.newInstance({arrayLike: arrayLike, tupleLike: tupleLike});
         }
+        return this;
+
     }
 
     includeAll() {
-        this.allowedTypes = true;
+        return this.newInstance(true);
     }
 
     excludeAll() {
-        this.allowedTypes = this.empty();
+        return this.newInstance({arrayLike: List<Type>(), tupleLike: Map<IndexForTupleLike<IndexT>, List<TupleType>>()});
     }
 
     isTop() {
@@ -75,7 +83,7 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     }
 
     isBottom() {
-        return this.allowedTypes !== true && this.allowedTypes.arrayLike.length === 0 && this.allowedTypes.tupleLike.size === 0;
+        return this.allowedTypes !== true && this.allowedTypes.arrayLike.size === 0 && this.allowedTypes.tupleLike.size === 0;
     }
 
     toDefinition() {
@@ -83,12 +91,12 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
             return [this.definitionOfTopType()];
 
         let definitions = [];
-        for (let entry of this.allowedTypes.arrayLike) {
+        for (let entry of this.allowedTypes.arrayLike.toArray()) {
             definitions.push(this.definitionOfArrayLikeType(entry));
         }
 
         for (let key of this.allowedTypes.tupleLike.keySeq().toArray()) {
-            for (let entry of this.allowedTypes.tupleLike.get(key)) {
+            for (let entry of this.allowedTypes.tupleLike.get(key).toArray()) {
                 definitions.push(this.definitionOfTupleLikeType(key, entry));
             }
         }
@@ -97,8 +105,7 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     }
 
     roundUp(validator: Validator, parameters: RoundUpParameters) {
-        this.roundUpTypesRecursively(validator, parameters);
-        this.mergeTupleTypes(validator, parameters);
+        return this.roundUpTypesRecursively(validator, parameters).mergeTupleTypes(validator, parameters);
     }
 
     canRoundUp(validator: Validator, superType: this, parameters: RoundUpParameters) {
@@ -108,7 +115,7 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
             return false;
 
         // TODO: Make more general.
-        if (superType.allowedTypes !== true && superType.allowedTypes.arrayLike.length === 0 && superType.allowedTypes.tupleLike.size === 0)
+        if (superType.allowedTypes !== true && superType.allowedTypes.arrayLike.size === 0 && superType.allowedTypes.tupleLike.size === 0)
             return true;
 
         throw Error("No support yet");
@@ -119,23 +126,19 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
      */
     private roundUpTypesRecursively(validator: Validator, parameters: RoundUpParameters) {
         if (this.allowedTypes !== true) {
-            // TODO: Find a way to generalize array types
-
-            for (let indices of this.allowedTypes.tupleLike.keySeq().toArray()) {
-                for (let tuple of this.allowedTypes.tupleLike.get(indices)) {
-                    for (let i = 0; i < indices.size; i++) {
-                        tuple.get(i).roundUp(validator.forSubExpression(indices.get(i)), parameters);
-                    }
-                }
-            }
+            return this.newInstance({arrayLike: this.allowedTypes.arrayLike, tupleLike: this.allowedTypes.tupleLike.map(
+                tuples => tuples.map(
+                    tuple => tuple.map(type => type.roundUp(validator, parameters)).toList()
+                    ).toList()).toMap()});
         }
+        return this;
     }
 
     /**
      * Combine tuple types when possible.
      */
     private mergeTupleTypes(validator: Validator, parameters: RoundUpParameters) {
-        if (this.allowedTypes !== true) {
+        /*if (this.allowedTypes !== true) {
             for (let indices of this.allowedTypes.tupleLike.keySeq().toArray()) {
                 let tuples = this.allowedTypes.tupleLike.get(indices);
                 let top = lowestUpperBound(indices, tuples);
@@ -143,15 +146,21 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
                     // Combine these to the top type.
                     this.allowedTypes.tupleLike.set(indices, [top]);
             }
-        }
+        }*/
+        return this;
+    }
+
+    ascendingPaths(params: [Validator, RoundUpParameters]) {
+        return List<this>();
     }
 }
 
-function lowestUpperBound<T>(indices: IndexForTupleLike<T>, tuples: TupleType[]) {
+/*
+function lowestUpperBound<T>(indices: IndexForTupleLike<T>, tuples: List<TupleType>) {
     return indices.map((_, index) => {
-        let type = new Type("bottom");
-        for (let tuple of tuples) {
-            type.includeType(tuple.get(val(index)));
+        let type = Type.bottom;
+        for (let tuple of tuples.toArray()) {
+            type = type.includeType(tuple.get(val(index)));
         }
         return type;
     }).toList();
@@ -159,4 +168,4 @@ function lowestUpperBound<T>(indices: IndexForTupleLike<T>, tuples: TupleType[])
 
 function canRoundUpTuple(validator: Validator, tuple: TupleType, top: TupleType, parameters: RoundUpParameters) {
     return tuple.every((type, index) => val(type).canRoundUp(validator.forSubExpression(val(index)), top.get(val(index)), parameters));
-}
+}*/

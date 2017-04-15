@@ -1,4 +1,5 @@
 import {Validator} from "../Validator";
+import {LatticeElement} from "./Lattice";
 
 type Variants = string[];
 
@@ -14,14 +15,11 @@ export interface RoundUpParameters {
     roundUpFromBottom: boolean;
 }
 
-export interface TypeComponent<T> {
-    include(value: T): void;
-    includeType(type: this): void;
-    includeAll(): void;
-    excludeAll(): void;
+export interface TypeComponent<T> extends LatticeElement<TypeComponent<T>, [Validator, RoundUpParameters]> {
+    include(value: T): this;
+    includeType(type: this): this;
 
     isTop(): boolean;
-
     isBottom(): boolean;
 
     /**
@@ -35,5 +33,5 @@ export interface TypeComponent<T> {
      */
     canRoundUp(validator: Validator, superType: this, parameters: RoundUpParameters): boolean;
 
-    roundUp(validator: Validator, parameters: RoundUpParameters): void;
+    roundUp(validator: Validator, parameters: RoundUpParameters): this;
 }

@@ -1,7 +1,7 @@
 import {FunctionCalls} from "./ExecutionTracer";
 import {FunctionsMap, val} from "./Module";
-import {Type} from "./Type";
-import {RoundUpParameters} from "./type_components/TypeComponent";
+import {Type} from "./types/Type";
+import {RoundUpParameters} from "./types/TypeComponent";
 
 export class FunctionTypeDefinition {
     constructor(public calls: FunctionCalls, public argTypes: Type[], public returnValueType: Type) {
