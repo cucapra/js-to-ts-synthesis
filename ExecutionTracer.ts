@@ -4,15 +4,15 @@ import * as path from "path";
 
 import {Map} from "immutable";
 import * as hooks from "./instrumentation/hooks";
-import {fileForTag, FunctionInfo, FunctionsMap, FunctionTag, val} from "./Module";
+import {fileForTag, FunctionInfo, FunctionsMap, FunctionTag} from "./Module";
 import {Workspace} from "./Workspace";
 
 // No definition file for this one.
 let LineReaderSync = require("line-reader-sync");
 
 export interface FunctionCall {
-    args: any[];
-    returnValue: any;
+    args: {}[];
+    returnValue: {};
 }
 
 export interface FunctionCalls {
@@ -77,10 +77,10 @@ export class ExecutionTracer {
         console.log(`Read instrumentation for ${calls0.size} functions.`);
 
         let calls = calls0
-            .groupBy((value, tag) => fileForTag(val(tag), exportedFunctions))
-            .map((seq, sourceFile) => val(seq).map((calls, tag) => ({
-                info: exportedFunctions.get(val(sourceFile)).get(val(tag)),
-                calls: val(calls)
+            .groupBy((value, tag) => fileForTag(tag, exportedFunctions))
+            .map((seq, sourceFile) => seq.map((calls, tag) => ({
+                info: exportedFunctions.get(sourceFile).get(tag),
+                calls: calls
             })).toMap()).toMap();
 
         this.checkCoverage(calls, exportedFunctions);

@@ -1,7 +1,6 @@
 import {Iterable} from "immutable";
 
 export interface LatticeElement<T, ParamsT> {
-    isTop(): boolean;
     ascendingPaths(params: ParamsT): Iterable<number, T>;
 }
 

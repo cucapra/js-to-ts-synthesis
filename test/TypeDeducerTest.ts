@@ -3,7 +3,7 @@ import {Map} from "immutable";
 import * as mocha from "mocha-typescript";
 import {FunctionCalls} from "../ExecutionTracer";
 import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
-import {FunctionInfo, FunctionsMap, val} from "../Module";
+import {FunctionInfo, FunctionsMap} from "../Module";
 import {SimpleTypeDeducer} from "../SimpleTypeDeducer";
 import {FunctionTypeDefinition} from "../TypeDeducer";
 import {UpperBoundTypeDeducer} from "../UpperBoundTypeDeducer";
@@ -13,7 +13,7 @@ function toDefinitions(d: FunctionsMap<FunctionTypeDefinition>): {[sourceFile: s
     let result: {[sourceFile: string]: string[]} = {};
 
     for (let sourceFile of d.keySeq().toArray()) {
-        result[sourceFile] = d.get(sourceFile).map(definition => val(definition).definitionFor()).toArray();
+        result[sourceFile] = d.get(sourceFile).map(definition => definition.definitionFor()).toArray();
     }
     return result;
 }
@@ -35,7 +35,7 @@ class TypeDeducerTest {
                         1,
                         {
                             file: "sample.js",
-                            info: new FunctionInfo("f", (x: any, y: any, z: any, w: any) => {
+                            info: new FunctionInfo("f", (x: {}, y: {}, z: {}, w: {}) => {
                                 void "id=1";
                             }),
                             calls: [
@@ -67,7 +67,7 @@ class TypeDeducerTest {
                         1,
                         {
                             file: "sample.js",
-                            info: new FunctionInfo("f", (x: any, y: any) => {
+                            info: new FunctionInfo("f", (x: {}, y: {}) => {
                                 void "id=1";
                                 if (typeof x !== "string") throw TypeError();
                                 if (typeof y === "string") throw TypeError();
@@ -101,15 +101,19 @@ class TypeDeducerTest {
                         1,
                         {
                             file: "sample.js",
-                            info: new FunctionInfo("f", (x: any, y: any, z: any, w: any) => {
+                            info: new FunctionInfo("f", (x: {}, y: {}, z: {}, w: {}) => {
                                 void "id=1";
+
+                                function hasFoo(w: {}): w is {foo: {}} {
+                                    return "foo" in w;
+                                }
                                 if ((typeof x !== "number")
                                     || (typeof y !== "string")
                                     || !Array.isArray(z)
                                     || (typeof z[0] !== "number")
                                     || (typeof z[1] !== "number")
                                     || (typeof w !== "object")
-                                    || (typeof w.foo !== "string"))
+                                    || (!hasFoo(w) || typeof w.foo !== "string"))
                                     throw TypeError("Bad argument");
                             }),
                             calls: [
@@ -147,9 +151,9 @@ class TypeDeducerTest {
                         1,
                         {
                             file: "sample.js",
-                            info: new FunctionInfo("f", (x: any) => {
+                            info: new FunctionInfo("f", (x: {}) => {
                                 void "id=1";
-                                if (x[0] !== "a" && x[0] !== "b")
+                                if (!Array.isArray(x) || (x[0] !== "a" && x[0] !== "b"))
                                     throw TypeError("Bad argument");
                             }),
                             calls: [
@@ -190,9 +194,9 @@ class TypeDeducerTest {
                         1,
                         {
                             file: "sample.js",
-                            info: new FunctionInfo("f", (x: any) => {
+                            info: new FunctionInfo("f", (x: {}) => {
                                 void "id=1";
-                                if (x[0] !== "a" && x[1] !== "a")
+                                if (!Array.isArray(x) || (x[0] !== "a" && x[1] !== "a"))
                                     throw TypeError("Bad argument");
                             }),
                             calls: [

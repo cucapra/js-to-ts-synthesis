@@ -1,13 +1,15 @@
-import {Set} from "immutable";
+import {List, Set} from "immutable";
 import {Validator} from "../Validator";
+import {handle} from "../Value";
 import {ArrayOrTupleTypeComponent} from "./ArrayOrTupleTypeComponent";
 import {BooleanTypeComponent} from "./BooleanTypeComponent";
 import {FunctionTypeComponent} from "./FunctionTypeComponent";
+import {Lattice} from "./Lattice";
 import {NullTypeComponent} from "./NullTypeComponent";
 import {NumberTypeComponent} from "./NumberTypeComponent";
 import {ObjectTypeComponent} from "./ObjectTypeComponent";
 import {StringTypeComponent} from "./StringTypeComponent";
-import {RoundUpParameters} from "./TypeComponent";
+import {RoundUpParameters, TypeComponent} from "./TypeComponent";
 import {UndefinedTypeComponent} from "./UndefinedTypeComponent";
 
 class TypeDefinitionBuilder {
@@ -25,7 +27,7 @@ class TypeDefinitionBuilder {
     }
 }
 
-export class Type {
+export class Type implements TypeComponent<{}> {
 
     constructor(
         private readonly nullType: NullTypeComponent,
@@ -86,8 +88,8 @@ export class Type {
         );
     }
 
-    includeType(type: Type) {
-        return new Type(
+    includeType(type: this) {
+        return <this>new Type(
             this.nullType.includeType(type.nullType),
             this.undefinedType.includeType(type.undefinedType),
             this.booleanType.includeType(type.booleanType),
@@ -144,29 +146,17 @@ export class Type {
         );
     }
 
-    extend(value: any): this {
-        if (value === null)
-            return this.update({nullType: this.nullType.include(value)});
-
-        switch (typeof value) {
-            case "undefined":
-                return this.update({undefinedType: this.undefinedType.include(value)});
-            case "boolean":
-                return this.update({booleanType: this.booleanType.include(value)});
-            case "number":
-                return this.update({numberType: this.numberType.include(value)});
-            case "string":
-                return this.update({stringType: this.stringType.include(value)});
-            case "function":
-                return this.update({functionType: this.functionType.include(value)});
-            case "object":
-                if (Array.isArray(value))
-                    return this.update({arrayOrTupleType: this.arrayOrTupleType.include(value)});
-                else
-                    return this.update({objectType: this.objectType.include(value)});
-            default:
-                throw new Error(`Cannot convert ${typeof value}: ${value}`);
-        }
+    include(value: {}): this {
+        return handle<this>(value, {
+            null: (value => this.update({nullType: this.nullType.include(value)})),
+            undefined: (value => this.update({undefinedType: this.undefinedType.include(value)})),
+            boolean: (value => this.update({booleanType: this.booleanType.include(value)})),
+            number: (value => this.update({numberType: this.numberType.include(value)})),
+            string: (value => this.update({stringType: this.stringType.include(value)})),
+            function: (value => this.update({functionType: this.functionType.include(value)})),
+            array: (value => this.update({arrayOrTupleType: this.arrayOrTupleType.include(value)})),
+            object: (value => this.update({objectType: this.objectType.include(value)}))
+        });
     }
 
     canRoundUp(validator: Validator, topType: Type, parameters: RoundUpParameters) {
@@ -193,51 +183,27 @@ export class Type {
         );
     }
 
-
-
-/*
-    private static mergeIntoTupleLowerBound(target: Type[], source: any[]) {
-        let numEntries = Math.max(target.length, source.length);
-        for (let i = 0; i < numEntries; i++) {
-            if (i >= target.length) {
-                // `source` has this, which means it's optional.
-                let type = new Type("bottom");
-                type.undefinedType.include(undefined);
-                target[i] = type.extend(source[i]);
-            }
-            else if (i >= source.length) {
-                // `source` doesn't have this, which means it's optional.
-                target[i].undefinedType.include(undefined);
-            }
-            else {
-                target[i].extend(source[i]);
-            }
-        }
+    /**
+     * The entire type has a parent in the lattice for every chance in any type component.
+     * Loop through them in an arbitrary order.
+     */
+    ascendingPaths(params: [Validator, RoundUpParameters]) {
+        return List([
+            this.nullType.ascendingPaths(params).map(t => this.update({nullType: t})),
+            this.undefinedType.ascendingPaths(params).map(t => this.update({undefinedType: t})),
+            this.booleanType.ascendingPaths(params).map(t => this.update({booleanType: t})),
+            this.numberType.ascendingPaths(params).map(t => this.update({numberType: t})),
+            this.stringType.ascendingPaths(params).map(t => this.update({stringType: t})),
+            this.functionType.ascendingPaths(params).map(t => this.update({functionType: t})),
+            this.arrayOrTupleType.ascendingPaths(params).map(t => this.update({arrayOrTupleType: t})),
+            this.objectType.ascendingPaths(params).map(t => this.update({objectType: t})),
+        ]).flatMap(iterator => iterator);
     }
-
-    private static mergeIntoObjectLowerBound(target: Map<Type>, source: any) {
-        let keys: StringSet = {};
-        for (let k of Object.keys(target)) {
-            keys[k] = true;
-        }
-        for (let k in source) {
-            keys[k] = true;
-        }
-
-        for (let k of Object.keys(keys)) {
-            if (!(k in target)) {
-                // `source` has this, which means it's optional.
-                let type = new Type("bottom");
-                type.undefinedType.include(undefined);
-                target[k] = type.extend(source[k]);
-            }
-            else if (!(k in source)) {
-                // `source` doesn't have this, which means it's optional.
-                target[k].undefinedType.include(undefined);
-            }
-            else {
-                target[k].extend(source[k]);
-            }
-        }
-    }*/
 };
+
+export class TypeLattice extends Lattice<Type, [Validator, RoundUpParameters]> {
+    walk(type: Type, params: [Validator, RoundUpParameters]) {
+        console.log(`Current type: ${type.toDefinition()}`);
+        return super.walk(type, params);
+    }
+}

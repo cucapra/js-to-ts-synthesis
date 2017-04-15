@@ -8,10 +8,10 @@ export class LowerBoundTypeDeducer extends TypeDeducer {
         let returnValueType = Type.bottom;
         for (let call of calls.calls){
             call.args.forEach((arg, i) => {
-                argTypes[i] = argTypes[i].extend(arg);
+                argTypes[i] = argTypes[i].include(arg);
             });
 
-            returnValueType = returnValueType.extend(call.returnValue);
+            returnValueType = returnValueType.include(call.returnValue);
         }
 
         return new FunctionTypeDefinition(calls, argTypes, returnValueType);

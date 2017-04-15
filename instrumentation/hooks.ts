@@ -10,11 +10,11 @@ declare var exportedFunctions: number[];
 
 export interface FunctionEntry {
     tag: number;
-    args: any[];
+    args: {}[];
 }
 
 export interface FunctionExit {
-    returnValue: any;
+    returnValue: {};
 }
 
 export interface FunctionCall extends FunctionEntry, FunctionExit {
@@ -39,14 +39,14 @@ export type InstrumentationLine = FunctionCall | UnbalancedEntryExit;
     let callStack: FunctionEntry[] = [];
 
     _meta_ = {
-        apply: function (fct: Function, thisObj: any, args: any[]) {
+        apply: function (fct: Function, thisObj: {}, args: {}[]) {
             let tag = tagFor(fct);
             if (exportedFunctions.indexOf(tag) > -1) {
                 callStack.push({tag: tag, args: args});
             }
             return fct.apply(thisObj, args);
         },
-        return: function (returnValue: any) {
+        return: function (returnValue: {}) {
             let tag = tagFor(arguments.callee.caller);
             // let exit = {name: caller.name, file: mainFile, returnValue: returnValue};
             if (exportedFunctions.indexOf(tag) > -1) {

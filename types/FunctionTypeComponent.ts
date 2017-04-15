@@ -1,7 +1,7 @@
 import {Map} from "immutable";
 import {BoundedValueTypeComponent} from "./BoundedValueTypeComponent";
 
-const ID = (x: any) => x;
+const ID = (x: {}) => x;
 
 // TODO: Implement better
 export class FunctionTypeComponent extends BoundedValueTypeComponent<Function> {

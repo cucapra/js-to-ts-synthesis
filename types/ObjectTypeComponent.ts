@@ -3,7 +3,7 @@ import {IndexForTupleLike, RecursiveTypeComponent, TupleType} from "./RecursiveT
 import {Type} from "./Type";
 import {pair} from "./TypeComponent";
 
-export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: string]: any}> {
+export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: string]: {}}> {
 
     static top = new ObjectTypeComponent(true);
     static bottom = new ObjectTypeComponent({arrayLike: List<Type>(), tupleLike: Map<IndexForTupleLike<string>, List<TupleType>>()});
@@ -12,8 +12,8 @@ export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: str
         return <this>new ObjectTypeComponent(allowedTypes);
     }
 
-    typeFor(obj: {[k: string]: any}) {
-        return Object.keys(obj).sort().map(key => pair(key, Type.bottom.extend(obj[key])));
+    typeFor(obj: {[k: string]: {}}) {
+        return Object.keys(obj).sort().map(key => pair(key, Type.bottom.include(obj[key])));
     }
 
     definitionOfTopType() {

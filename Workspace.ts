@@ -6,11 +6,12 @@ import {FunctionModule, FunctionsMap, Module, ModuleParameters, ObjectModule} fr
 import {FunctionTypeDefinition} from "./TypeDeducer";
 
 // Needed so that this can require the module.
+// tslint:disable-next-line:no-any
 (<any>global)._meta_ = {
-    apply: function (fct: Function, thisObj: any, args: any[]) {
+    apply: function (fct: Function, thisObj: {}, args: {}[]) {
         return fct.apply(thisObj, args);
     },
-    return: function (returnValue: any) {
+    return: function (returnValue: {}) {
         return returnValue;
     }
 };

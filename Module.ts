@@ -10,13 +10,6 @@ export type SourceFile = string;
 export type FunctionTag = number;
 export type FunctionsMap<T> = Map<SourceFile, Map<FunctionTag, T>>;
 
-// The Map functions have a lot of undefined in their transform functions. Get rid of those.
-export function val<T>(v: T | undefined) {
-    if (v === undefined)
-        throw Error("Unexpected undefined");
-    return v;
-}
-
 export class FunctionInfo {
     args: ArgDef[];
 
@@ -24,7 +17,7 @@ export class FunctionInfo {
         this.args = argDefs(f);
     }
 
-    run(args: any[]) {
+    run(args: {}[]) {
         try {
              this.f.apply(undefined, args);
         }
@@ -81,6 +74,7 @@ export class ObjectModule extends Module {
         ]));
     }
 
+    // tslint:disable-next-line:no-any
     private static exportFunctions(exportedFunctions: [number, FunctionInfo][], target: any, path: string[], parameters: ModuleParameters) {
         switch (typeof target) {
             case "function":

@@ -13,12 +13,12 @@ interface Function {
     name: string;
 }
 
-const TYPE_DEDUCERS = [
-    SimpleTypeDeducer,
-    NullTypeDeducer,
-    LowerBoundTypeDeducer,
-    UpperBoundTypeDeducer
-];
+const TYPE_DEDUCERS = {
+    SimpleTypeDeducer: SimpleTypeDeducer,
+    NullTypeDeducer: NullTypeDeducer,
+    LowerBoundTypeDeducer: LowerBoundTypeDeducer,
+    UpperBoundTypeDeducer: UpperBoundTypeDeducer
+};
 
 export class Pipeline {
 
@@ -59,7 +59,7 @@ export function main() {
         })
         .option("typeDeducer", {
             describe: "The TypeDeducer implementation to use.",
-            choices: TYPE_DEDUCERS.map(t => (<any>t).name),
+            choices: Object.keys(TYPE_DEDUCERS),
             default: "SimpleTypeDeducer"
         })
         .help()

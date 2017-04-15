@@ -1,5 +1,5 @@
 import {FunctionCalls} from "./ExecutionTracer";
-import {FunctionsMap, val} from "./Module";
+import {FunctionsMap} from "./Module";
 import {Type} from "./types/Type";
 import {RoundUpParameters} from "./types/TypeComponent";
 
@@ -29,7 +29,7 @@ export abstract class TypeDeducer {
     constructor(protected parameters: RoundUpParameters) {}
 
     getAllTypeDefinitions(executions: FunctionsMap<FunctionCalls>): FunctionsMap<FunctionTypeDefinition> {
-        return executions.map(m => val(m).map(functionCalls => this.getTypeFor(val(functionCalls))).toMap()).toMap();
+        return executions.map(m => m.map(functionCalls => this.getTypeFor(functionCalls)).toMap()).toMap();
     }
 
     protected abstract getTypeFor(calls: FunctionCalls): FunctionTypeDefinition;

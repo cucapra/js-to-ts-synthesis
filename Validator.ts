@@ -8,7 +8,7 @@ type KeyType = number|string;
 
 export interface ValueProvider {
     singleValue?: true;
-    value(originalArg: any): any;
+    value<T>(originalArg: T): T;
 }
 
 export abstract class Validator {
@@ -83,7 +83,7 @@ class SubExpressionValidator extends Validator {
     validate(valueProvider: ValueProvider) {
         return this.parent.validate({
             singleValue: valueProvider.singleValue,
-            value: (originalArg) => {
+            value: (originalArg: {[k: string]: {}}) => {
                 originalArg[this.property] = valueProvider.value(originalArg[this.property]);
                 return originalArg;
             }

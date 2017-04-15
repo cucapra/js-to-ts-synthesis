@@ -99,6 +99,7 @@
             "check-operator",
             "check-separator",
             "check-type"
-        ]
+        ],
+        "no-any": true
     }
 }

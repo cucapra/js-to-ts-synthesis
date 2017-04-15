@@ -3,7 +3,7 @@ import {IndexForTupleLike, RecursiveTypeComponent, TupleType} from "./RecursiveT
 import {Type} from "./Type";
 import {pair} from "./TypeComponent";
 
-export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, any[]> {
+export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, {}[]> {
 
     static top = new ArrayOrTupleTypeComponent(true);
     static bottom = new ArrayOrTupleTypeComponent({arrayLike: List<Type>(), tupleLike: Map<IndexForTupleLike<number>, List<TupleType>>()});
@@ -12,8 +12,8 @@ export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, an
         return <this>new ArrayOrTupleTypeComponent(allowedTypes);
     }
 
-    typeFor(array: any[]) {
-        return array.map((value, index) => pair(index, Type.bottom.extend(value)));
+    typeFor(array: {}[]) {
+        return array.map((value, index) => pair(index, Type.bottom.include(value)));
     }
 
     definitionOfTopType() {
@@ -31,7 +31,7 @@ export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, an
             return "[" + indices.toArray().map(index => types.get(index).toDefinition()).join(", ") + "]";
     }
 
-    emptyValue(): any[] {
+    emptyValue(): {}[] {
         return [];
     }
 }

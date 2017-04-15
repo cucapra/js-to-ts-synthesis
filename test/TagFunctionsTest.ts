@@ -11,18 +11,8 @@ class TagFunctionsTest {
     @mocha.test
     @mocha.timeout(300000)
     testTagFunctions() {
-        {
-            let tagged = tagFunctions("function f() {};");
-            assert.include(tagged, "void 'id=1'");
-            assert.strictEqual(tagFor(asFunction("f", tagged)), 1);
-        }
-        {
-            let tagged = tagFunctions("f = function(){};");
-            assert.include(tagged, "void 'id=1'");
-            assert.strictEqual(tagFor(asFunction("f", tagged)), 1);
-        }
-        {
-            let tagged = tagFunctions("obj = {f: function(){}}; f = obj.f;");
+        for (let source of ["function f() {};", "f = function(){};", "obj = {f: function(){}}; f = obj.f;"]) {
+            let tagged = tagFunctions(source);
             assert.include(tagged, "void 'id=1'");
             assert.strictEqual(tagFor(asFunction("f", tagged)), 1);
         }
@@ -32,5 +22,5 @@ class TagFunctionsTest {
 function asFunction(name: string, source: string): Function {
     let sandbox = vm.createContext();
     vm.runInContext(source, sandbox);
-    return (<any>sandbox)[name];
+    return (<{[name: string]: Function}>sandbox)[name];
 }

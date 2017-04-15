@@ -7,10 +7,10 @@ export class NullTypeDeducer extends TypeDeducer {
 
         let argTypes = calls.info.args.map(a => Type.bottom);
         for (let i = 0; i < argTypes.length; i++) {
-            argTypes[i].extend(null);
+            argTypes[i].include(null);
         }
 
-        let returnValueType = Type.bottom.includeAll(null);
+        let returnValueType = Type.bottom.include(null);
         return new FunctionTypeDefinition(calls, argTypes, returnValueType);
     }
 }
