@@ -129,7 +129,7 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
 
         let allowedTypes = this.allowedTypes;
         return uniqueIndexPairs(allowedTypes.tupleLike.size)
-            .map(([i, j]) => allowedTypes.tupleLike.remove(i).remove(j).push(this.combineTuples(allowedTypes.tupleLike.get(i), allowedTypes.tupleLike.get(j))))
+            .map(([i, j]) => allowedTypes.tupleLike.remove(i).remove(j - 1).push(this.combineTuples(allowedTypes.tupleLike.get(i), allowedTypes.tupleLike.get(j))))
             .map(tupleLike => this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: tupleLike}));
     }
 

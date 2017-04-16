@@ -37,10 +37,8 @@ export class ArgValidator extends Validator {
 
         if (this.arg >= this.functionInfo.args.length)
             throw Error(`Argument ${this.arg} out of bounds`);
-        console.log(`Call ${this.functionInfo.name}`);
 
         let timesToRun = valueProvider.singleValue ? 1 : NUM_INVOCATIONS;
-
         for (let i = 0; i < timesToRun; i++) {
             /**
              * Need a deep clone of the arguments for two reasons.
@@ -48,27 +46,10 @@ export class ArgValidator extends Validator {
              * 2) Recursive validation may require manipulating arguments rather than replacing them.
              */
             let args = deepClone(this.testCalls[Math.floor(Math.random() * this.testCalls.length)].args);
+            args[this.arg] = valueProvider.value(args[this.arg]);
 
-            for (let i = 0; i < args.length; i++) {
-                if (i === this.arg) {
-                    let value = valueProvider.value(args[i]);
-                    console.log(`- ${JSON.stringify(value)}`);
-                    args[i] = value;
-                }
-                else {
-                    console.log(`- ${JSON.stringify(args[i])} [unchanged]`);
-                }
-            }
-
-            if (this.functionInfo.run(args)) {
-                console.log("OK");
-                console.log();
-            }
-            else {
-                console.log("NOT OK");
-                console.log();
+            if (!this.functionInfo.run(args))
                 return false;
-            }
         }
 
         return true;

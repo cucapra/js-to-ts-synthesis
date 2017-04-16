@@ -7,6 +7,7 @@ import {FunctionInfo, FunctionsMap} from "../Module";
 import {SimpleTypeDeducer} from "../SimpleTypeDeducer";
 import {FunctionTypeDefinition} from "../TypeDeducer";
 import {UpperBoundTypeDeducer} from "../UpperBoundTypeDeducer";
+import {testOutputFile} from "./test_output";
 
 // Return an object rather than a map, for easier assertEquals
 function toDefinitions(d: FunctionsMap<FunctionTypeDefinition>): {[sourceFile: string]: string[]} {
@@ -26,7 +27,7 @@ class TypeDeducerTest {
      */
     @mocha.test
     testLowerBoundTypeDeducer() {
-        let typeDeducer = new LowerBoundTypeDeducer({roundUpFromBottom: false});
+        let typeDeducer = new LowerBoundTypeDeducer({roundUpFromBottom: false}, testOutputFile("testLowerBoundTypeDeducer"));
         let calls = Map<string, Map<number, FunctionCalls>>([
             [
                 "sample.js",
@@ -58,7 +59,7 @@ class TypeDeducerTest {
      */
     @mocha.test
     testUpperBoundTypeDeducer() {
-        let typeDeducer = new UpperBoundTypeDeducer({roundUpFromBottom: false});
+        let typeDeducer = new UpperBoundTypeDeducer({roundUpFromBottom: false}, testOutputFile("testUpperBoundTypeDeducer"));
         let calls = Map<string, Map<number, FunctionCalls>>([
             [
                 "sample.js",
@@ -91,7 +92,7 @@ class TypeDeducerTest {
      */
     @mocha.test
     testSimpleTypeDeducer() {
-        let typeDeducer = new SimpleTypeDeducer({roundUpFromBottom: false});
+        let typeDeducer = new SimpleTypeDeducer({roundUpFromBottom: false}, testOutputFile("testSimpleTypeDeducer"));
         let calls = Map<string, Map<number, FunctionCalls>>([
             [
                 "sample.js",
@@ -141,7 +142,7 @@ class TypeDeducerTest {
     @mocha.test
     // @mocha.skip // TODO Fix with the lattice approach.
     testSimpleTypeDeducerRecursiveLiteralsCombine() {
-        let typeDeducer = new SimpleTypeDeducer({roundUpFromBottom: false});
+        let typeDeducer = new SimpleTypeDeducer({roundUpFromBottom: false}, testOutputFile("testSimpleTypeDeducerRecursiveLiteralsCombine"));
         let calls = Map<string, Map<number, FunctionCalls>>([
             [
                 "sample.js",
@@ -184,7 +185,7 @@ class TypeDeducerTest {
     @mocha.test
     @mocha.skip
     testSimpleTypeDeducerRecursiveDependentLiteralsCombine() {
-        let typeDeducer = new SimpleTypeDeducer({roundUpFromBottom: false});
+        let typeDeducer = new SimpleTypeDeducer({roundUpFromBottom: false}, testOutputFile("testSimpleTypeDeducerRecursiveDependentLiteralsCombine"));
         let calls = Map<string, Map<number, FunctionCalls>>([
             [
                 "sample.js",

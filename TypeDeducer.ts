@@ -26,7 +26,7 @@ export class FunctionTypeDefinition {
 }
 
 export abstract class TypeDeducer {
-    constructor(protected parameters: RoundUpParameters) {}
+    constructor(protected parameters: RoundUpParameters, protected fileToWriteDebugging: string) {}
 
     getAllTypeDefinitions(executions: FunctionsMap<FunctionCalls>): FunctionsMap<FunctionTypeDefinition> {
         return executions.map(m => m.map(functionCalls => this.getTypeFor(functionCalls)).toMap()).toMap();

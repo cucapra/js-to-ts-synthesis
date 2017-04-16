@@ -4,7 +4,6 @@ import {handle} from "../Value";
 import {ArrayOrTupleTypeComponent} from "./ArrayOrTupleTypeComponent";
 import {BooleanTypeComponent} from "./BooleanTypeComponent";
 import {FunctionTypeComponent} from "./FunctionTypeComponent";
-import {Lattice} from "./Lattice";
 import {NullTypeComponent} from "./NullTypeComponent";
 import {NumberTypeComponent} from "./NumberTypeComponent";
 import {ObjectTypeComponent} from "./ObjectTypeComponent";
@@ -187,10 +186,3 @@ export class Type implements TypeComponent<{}> {
         ]).flatMap(iterator => iterator);
     }
 };
-
-export class TypeLattice extends Lattice<Type, [Validator, RoundUpParameters]> {
-    walk(type: Type, params: [Validator, RoundUpParameters]) {
-        console.log(`Current type: ${type.toDefinition()}`);
-        return super.walk(type, params);
-    }
-}

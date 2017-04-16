@@ -8,6 +8,7 @@ import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
 import {NullTypeDeducer} from "../NullTypeDeducer";
 import {Pipeline} from "../Pipeline";
 import {SimpleTypeDeducer} from "../SimpleTypeDeducer";
+import {testOutputFile} from "./test_output";
 
 const TEST_TIMEOUT_WINDOW = 60000;
 
@@ -27,7 +28,11 @@ class PipelineTest {
     @mocha.timeout(300000)
     testBadTypeDeducer() {
         let workingDir = this.tempFolder();
-        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse", workingDir, TEST_TIMEOUT_WINDOW, new NullTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS), {treatAllErrorsAsTypeErrors: true});
+        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse",
+            workingDir,
+            TEST_TIMEOUT_WINDOW,
+            new NullTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testBadTypeDeducer")),
+            {treatAllErrorsAsTypeErrors: true});
 
         assert.throws(() => {pipeline.run(); });
     }
@@ -36,7 +41,11 @@ class PipelineTest {
     @mocha.timeout(300000)
     testLowerBoundTypeDeducer() {
         let workingDir = this.tempFolder();
-        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse", workingDir, TEST_TIMEOUT_WINDOW, new LowerBoundTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS), {treatAllErrorsAsTypeErrors: true});
+        let pipeline = new Pipeline("https://github.com/IonicaBizau/git-url-parse",
+            workingDir,
+            TEST_TIMEOUT_WINDOW,
+            new LowerBoundTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testLowerBoundTypeDeducer")),
+            {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 
         assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), GIT_URL_PARSE_EXPECTED_LOWER);
@@ -58,7 +67,11 @@ class PipelineTest {
     @mocha.timeout(300000)
     testSimpleTypeDeducer() {
         let workingDir = this.tempFolder();
-        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse", workingDir, TEST_TIMEOUT_WINDOW, new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS), {treatAllErrorsAsTypeErrors: true});
+        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse",
+            workingDir,
+            TEST_TIMEOUT_WINDOW,
+            new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testSimpleTypeDeducer")),
+            {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 
         assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), GIT_URL_PARSE_EXPECTED_SIMPLE);
@@ -69,7 +82,11 @@ class PipelineTest {
     @mocha.timeout(300000)
     testModuleThatExportsAnObject() {
         let workingDir = this.tempFolder();
-        let pipeline = new Pipeline("https://github.com/lelylan/simple-oauth2", workingDir, TEST_TIMEOUT_WINDOW, new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS), {treatAllErrorsAsTypeErrors: true});
+        let pipeline = new Pipeline("https://github.com/lelylan/simple-oauth2",
+            workingDir,
+            TEST_TIMEOUT_WINDOW,
+            new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testModuleThatExportsAnObject")),
+            {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 
         assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), "export declare function gitUrlParse(url: string): {};\n");

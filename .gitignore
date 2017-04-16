@@ -1,3 +1,4 @@
 node_modules
 *.js
 !bin/*.js
+test/test_output

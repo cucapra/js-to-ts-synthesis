@@ -24,6 +24,7 @@
     "acorn": "^4.0.11",
     "deep-clone": "^3.0.2",
     "es6-shim": "^0.35.3",
+    "escape-quotes": "^1.0.2",
     "immutable": "^3.8.1",
     "js-beautify": "^1.6.11",
     "line-reader-sync": "^0.1.0",
