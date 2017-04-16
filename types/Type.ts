@@ -1,4 +1,4 @@
-import {List, Set} from "immutable";
+import {Iterable, List, Set} from "immutable";
 import {Validator} from "../Validator";
 import {handle} from "../Value";
 import {ArrayOrTupleTypeComponent} from "./ArrayOrTupleTypeComponent";
@@ -101,6 +101,17 @@ export class Type implements TypeComponent<{}> {
         );
     }
 
+    isSubtypeOf(type: this) {
+        return this.nullType.isSubtypeOf(type.nullType)
+            && this.undefinedType.isSubtypeOf(type.undefinedType)
+            && this.booleanType.isSubtypeOf(type.booleanType)
+            && this.numberType.isSubtypeOf(type.numberType)
+            && this.stringType.isSubtypeOf(type.stringType)
+            && this.functionType.isSubtypeOf(type.functionType)
+            && this.arrayOrTupleType.isSubtypeOf(type.arrayOrTupleType)
+            && this.objectType.isSubtypeOf(type.objectType);
+    }
+
     toDefinition(): string {
         if (this.nullType.isTop()
                 && this.undefinedType.isTop()
@@ -159,35 +170,11 @@ export class Type implements TypeComponent<{}> {
         });
     }
 
-    canRoundUp(validator: Validator, topType: Type, parameters: RoundUpParameters) {
-        return this.nullType.canRoundUp(validator, topType.nullType, parameters)
-            && this.undefinedType.canRoundUp(validator, topType.undefinedType, parameters)
-            && this.booleanType.canRoundUp(validator, topType.booleanType, parameters)
-            && this.numberType.canRoundUp(validator, topType.numberType, parameters)
-            && this.stringType.canRoundUp(validator, topType.stringType, parameters)
-            && this.functionType.canRoundUp(validator, topType.functionType, parameters)
-            && this.arrayOrTupleType.canRoundUp(validator, topType.arrayOrTupleType, parameters)
-            && this.objectType.canRoundUp(validator, topType.objectType, parameters);
-    }
-
-    roundUp(validator: Validator, parameters: RoundUpParameters): Type {
-        return new Type(
-            this.nullType.roundUp(validator, parameters),
-            this.undefinedType.roundUp(validator, parameters),
-            this.booleanType.roundUp(validator, parameters),
-            this.numberType.roundUp(validator, parameters),
-            this.stringType.roundUp(validator, parameters),
-            this.functionType.roundUp(validator, parameters),
-            this.arrayOrTupleType.roundUp(validator, parameters),
-            this.objectType.roundUp(validator, parameters)
-        );
-    }
-
     /**
      * The entire type has a parent in the lattice for every chance in any type component.
      * Loop through them in an arbitrary order.
      */
-    ascendingPaths(params: [Validator, RoundUpParameters]) {
+    ascendingPaths(params: [Validator, RoundUpParameters]): Iterable<{}, this> {
         return List([
             this.nullType.ascendingPaths(params).map(t => this.update({nullType: t})),
             this.undefinedType.ascendingPaths(params).map(t => this.update({undefinedType: t})),

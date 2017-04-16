@@ -1,10 +1,10 @@
 import {Iterable} from "immutable";
 
-export interface LatticeElement<T, ParamsT> {
-    ascendingPaths(params: ParamsT): Iterable<number, T>;
+export interface LatticeElement<ParamsT> {
+    ascendingPaths(params: ParamsT): Iterable<{}, this>;
 }
 
-export class Lattice<T extends LatticeElement<T, ParamsT>, ParamsT> {
+export class Lattice<T extends LatticeElement<ParamsT>, ParamsT> {
     /**
      * For now, just walk along one arbitrary path. This may be improved later.
      */

@@ -16,7 +16,11 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
         if (other.values === true || this.values === true) {
             return this.newInstance(true);
         }
-        return this.newInstance(this.values.merge(other.values));
+        return this.newInstance(this.values.union(other.values));
+    }
+
+    isSubtypeOf(other: this) {
+        return other.values === true || (this.values !== true && this.values.isSubset(other.values));
     }
 
     includeAll() {
@@ -41,26 +45,6 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
         return this.values.toArray().map(n => JSON.stringify(n));
     }
 
-    canRoundUp(validator: Validator, superType: this, parameters: RoundUpParameters) {
-        if (this.values === true)
-            return true;
-        if (!parameters.roundUpFromBottom && this.isBottom() && !superType.isBottom())
-            return false;
-
-        let myValues = this.values;
-
-        return superType.values === true
-            ? validator.validate({value: () => this.valueNotInSet()}) // Check a few random values values outside of this set
-              /* TODO use subtract */
-            : superType.values.toArray().filter(el => !myValues.has(el)).every(value => validator.validate({singleValue: true, value: () => value})); // Check all values in the top type, but not in this set.
-    }
-
-    roundUp(validator: Validator, parameters: RoundUpParameters) {
-        if ((parameters.roundUpFromBottom || !this.isBottom()) && this.values !== true && validator.validate({value: () => this.valueNotInSet()}))
-            return this.newInstance(true);
-        return this;
-    }
-
     private valueNotInSet(): T {
         if (this.values === true) {
             throw Error("No such value");
@@ -76,8 +60,16 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
     protected abstract getName(): string;
     protected abstract randomValue(): T;
 
-    ascendingPaths(params: [Validator, RoundUpParameters]) {
-        return List<this>();
+    ascendingPaths([validator, params]: [Validator, RoundUpParameters]) {
+        if ((this.isBottom() && !params.roundUpFromBottom) || this.values === true || !validator.validate({value: () => this.valueNotInSet()}))
+            return List<this>();
+        return List<this>([this.newInstance(true)]);
+        /*
+        return List<Iterable<{}, this>>([
+            ascendingPathsToTop,
+            hinter
+                .filter(entry => !values.has(entry) && validator.validate({singleValue: true, value: () => entry}))
+                .map(entry => this.newInstance(values.add(entry)))
+        ]).flatMap(iterable => iterable);*/
     }
-
 }

@@ -13,7 +13,9 @@ export interface RoundUpParameters {
     roundUpFromBottom: boolean;
 }
 
-export interface TypeComponent<T> extends LatticeElement<TypeComponent<T>, [Validator, RoundUpParameters]> {
+/** A PathHinterT pay optionally be provided to find ascending paths. */
+export interface TypeComponent<T> extends LatticeElement<[Validator, RoundUpParameters]> {
     include(value: T): this;
     includeType(type: this): this;
+    isSubtypeOf(type: this): boolean;
 }

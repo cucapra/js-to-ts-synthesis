@@ -28,7 +28,9 @@
     "js-beautify": "^1.6.11",
     "line-reader-sync": "^0.1.0",
     "logic-solver": "^2.0.1",
+    "option.ts": "^0.3.0",
     "randomstring": "^1.1.5",
+    "ts-optional": "^1.0.2",
     "typescript-array-extensions": "^0.4.3",
     "yargs": "^6.6.0"
   },

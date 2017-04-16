@@ -1,4 +1,4 @@
-import {List, Map} from "immutable";
+import {Iterable, List, Map} from "immutable";
 import {Validator} from "../Validator";
 import {RoundUpParameters, TypeComponent} from "./TypeComponent";
 
@@ -15,12 +15,11 @@ export abstract class BoundedValueTypeComponent<T> implements TypeComponent<T> {
     }
 
     includeType(other: this) {
-        let m = this.allowedValues;
-        for (let key of other.allowedValues.keySeq().toArray()) {
-            if (other.allowedValues.get(key))
-                m = m.set(key, true);
-        }
-        return this.newInstance(m);
+        return this.newInstance(this.allowedValues.map((allowed, value) => allowed || other.allowedValues.get(value)).toMap());
+    }
+
+    isSubtypeOf(other: this) {
+        return this.allowedValues.every((allowed, value) => !allowed || other.allowedValues.get(value));
     }
 
     includeAll() {
@@ -42,26 +41,15 @@ export abstract class BoundedValueTypeComponent<T> implements TypeComponent<T> {
     toDefinition() {
         if (this.isTop())
             return [this.getName()];
-
-        return this.allowedValues.filter((allowed, value) => allowed).map((allowed, value) => this.nameFor(value)).toArray();
+        return this.allowedValues.filter(allowed => allowed).map((allowed, value) => this.nameFor(value)).toArray();
     }
 
-    canRoundUp(validator: Validator, superType: this, parameters: RoundUpParameters) {
-        if (!parameters.roundUpFromBottom && this.isBottom() && !superType.isBottom())
-            return false;
-
-        return this.allowedValues.every((allowed, value) => allowed || !superType.allowedValues.get(value) || validator.validate({singleValue: true, value: () => value}));
-    }
-
-    roundUp(validator: Validator, parameters: RoundUpParameters) {
-        if (this.isBottom() && !parameters.roundUpFromBottom)
-            return this;
-
-        return this.newInstance(this.allowedValues.map((allowed, value) => allowed || validator.validate({singleValue: true, value: () => value})).toMap());
-    }
-
-    ascendingPaths(params: [Validator, RoundUpParameters]) {
-        return List<this>();
+    ascendingPaths([validator, params]: [Validator, RoundUpParameters]): Iterable<{}, this> {
+        if (this.isBottom() && !params.roundUpFromBottom)
+            return List<this>();
+        return this.allowedValues
+            .filter((allowed, value) => !allowed && validator.validate({singleValue: true, value: () => value}))
+            .map((allowed, value) => this.include(value));
     }
 
     protected abstract getName(): string;

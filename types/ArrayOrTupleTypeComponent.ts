@@ -1,19 +1,19 @@
 import {List, Map} from "immutable";
-import {IndexForTupleLike, RecursiveTypeComponent, TupleType} from "./RecursiveTypeComponent";
+import {RecursiveTypeComponent} from "./RecursiveTypeComponent";
 import {Type} from "./Type";
 import {pair} from "./TypeComponent";
 
 export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, {}[]> {
 
     static top = new ArrayOrTupleTypeComponent(true);
-    static bottom = new ArrayOrTupleTypeComponent({arrayLike: List<Type>(), tupleLike: Map<IndexForTupleLike<number>, List<TupleType>>()});
+    static bottom = new ArrayOrTupleTypeComponent({arrayLike: List<Type>(), tupleLike: List<Map<number, Type>>()});
 
-    newInstance(allowedTypes: true | { readonly arrayLike: List<Type>, tupleLike: Map<IndexForTupleLike<number>, List<TupleType>>}) {
+    newInstance(allowedTypes: true | { readonly arrayLike: List<Type>, readonly tupleLike: List<Map<number, Type>>}) {
         return <this>new ArrayOrTupleTypeComponent(allowedTypes);
     }
 
     typeFor(array: {}[]) {
-        return array.map((value, index) => pair(index, Type.bottom.include(value)));
+        return Map<number, Type>(array.map((value, index) => pair(index, Type.bottom.include(value))));
     }
 
     definitionOfTopType() {
@@ -24,11 +24,11 @@ export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, {}
         return type.toDefinition() + "[]";
     }
 
-    definitionOfTupleLikeType(indices: List<number>, types: List<Type>) {
-        if (indices.size === 0)
+    definitionOfTupleLikeType(type: Map<number, Type>) {
+        if (type.isEmpty())
             return "undefined[]"; // Can't have empty tuples in the type definition.
         else
-            return "[" + indices.toArray().map(index => types.get(index).toDefinition()).join(", ") + "]";
+            return "[" + type.map(type => type.toDefinition()).join(", ") + "]";
     }
 
     emptyValue(): {}[] {
