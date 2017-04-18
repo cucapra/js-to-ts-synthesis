@@ -31,7 +31,7 @@ class PipelineTest {
         let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse",
             workingDir,
             TEST_TIMEOUT_WINDOW,
-            new NullTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testBadTypeDeducer")),
+            new NullTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testBadTypeDeducerPipeline")),
             {treatAllErrorsAsTypeErrors: true});
 
         assert.throws(() => {pipeline.run(); });
@@ -44,7 +44,7 @@ class PipelineTest {
         let pipeline = new Pipeline("https://github.com/IonicaBizau/git-url-parse",
             workingDir,
             TEST_TIMEOUT_WINDOW,
-            new LowerBoundTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testLowerBoundTypeDeducer")),
+            new LowerBoundTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testLowerBoundTypeDeducerPipeline")),
             {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 
@@ -63,14 +63,13 @@ class PipelineTest {
     }
 */
     @mocha.test
-    @mocha.skip // Skip for now. Need to get rounding up of arrays/objects working first.
     @mocha.timeout(300000)
     testSimpleTypeDeducer() {
         let workingDir = this.tempFolder();
         let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse",
             workingDir,
             TEST_TIMEOUT_WINDOW,
-            new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testSimpleTypeDeducer")),
+            new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testSimpleTypeDeducerPipeline")),
             {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 
@@ -85,7 +84,7 @@ class PipelineTest {
         let pipeline = new Pipeline("https://github.com/lelylan/simple-oauth2",
             workingDir,
             TEST_TIMEOUT_WINDOW,
-            new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testModuleThatExportsAnObject")),
+            new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testModuleThatExportsAnObjectPipeline")),
             {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 

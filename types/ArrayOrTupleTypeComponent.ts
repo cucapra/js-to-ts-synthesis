@@ -1,7 +1,6 @@
 import {List, Map} from "immutable";
 import {RecursiveTypeComponent} from "./RecursiveTypeComponent";
 import {Type} from "./Type";
-import {pair} from "./TypeComponent";
 
 export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, {}[]> {
 
@@ -13,7 +12,7 @@ export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, {}
     }
 
     typeFor(array: {}[]) {
-        return Map<number, Type>(array.map((value, index) => pair(index, Type.bottom.include(value))));
+        return Map<number, Type>(array.map((value, index) => [index, Type.bottom.include(value)]));
     }
 
     definitionOfTopType() {
@@ -28,7 +27,7 @@ export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, {}
         if (type.isEmpty())
             return "undefined[]"; // Can't have empty tuples in the type definition.
         else
-            return "[" + type.map(type => type.toDefinition()).join(", ") + "]";
+            return "[" + type.keySeq().sort().map(key => type.get(key).toDefinition()).join(", ") + "]";
     }
 
     emptyValue(): {}[] {

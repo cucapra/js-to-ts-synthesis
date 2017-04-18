@@ -1,7 +1,7 @@
-import {Iterable, List, Map, Range} from "immutable";
+import {List, Map, Range} from "immutable";
 import {Validator} from "../Validator";
 import {Type} from "./Type";
-import {pair, RoundUpParameters, TypeComponent} from "./TypeComponent";
+import {RoundUpParameters, TypeComponent} from "./TypeComponent";
 
 export abstract class RecursiveTypeComponent<IndexT extends number|string, T> implements TypeComponent<T> {
     /**
@@ -82,12 +82,12 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
             return [this.definitionOfTopType()];
 
         let definitions = [];
-        for (let entry of this.allowedTypes.arrayLike.toArray()) {
-            definitions.push(this.definitionOfArrayLikeType(entry));
+        for (let entry of this.allowedTypes.arrayLike.map(entry => this.definitionOfArrayLikeType(entry)).sort().toArray()) {
+            definitions.push(entry);
         }
 
-        for (let entry of this.allowedTypes.tupleLike.toArray()) {
-            definitions.push(this.definitionOfTupleLikeType(entry));
+        for (let entry of this.allowedTypes.tupleLike.map(entry => this.definitionOfTupleLikeType(entry)).sort().toArray()) {
+            definitions.push(entry);
         }
 
         return definitions;
@@ -96,6 +96,7 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     /**
      * Valid transformations include:
      * 1) Changing any component of any tuple type.
+     * 2) Combining two tuple types.
      */
     ascendingPaths([validator, params]: [Validator, RoundUpParameters]) {
         return List([
@@ -107,30 +108,30 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     /** Take the ascending paths for each tuple, and return this same type with the new tuple in the old one's place. */
     private recursiveTupleLikeAscendingPaths(validator: Validator, params: RoundUpParameters) {
         if (this.allowedTypes === true)
-            return List<this>();
+            return List<[this, boolean, string]>();
 
         let allowedTypes = this.allowedTypes;
         return allowedTypes.tupleLike.keySeq()
             .flatMap(index => this.recursiveAscendingPathsForTuple(allowedTypes.tupleLike.get(index), validator, params)
-                .map(ascTuple => this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.set(index, ascTuple)})));
+                .map(([ascTuple, valid]) => <[this, boolean, string]>[this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.set(index, ascTuple)}), valid, "RECURSIVE-TUPLE"]));
     }
 
     /** Take the ascending paths for each underlying type, and return this same tuple with the new type in the old type's place. */
     private recursiveAscendingPathsForTuple(tuple: Map<IndexT, Type>, validator: Validator, params: RoundUpParameters) {
         return tuple.keySeq()
             .flatMap(key => tuple.get(key).ascendingPaths([validator.forSubExpression(key), params])
-                .map(ascType => tuple.set(key, ascType)));
+                .map(([ascType, valid]) => <[Map<IndexT, Type>, boolean]>[tuple.set(key, ascType), valid]));
     }
 
     /** Can combine any two tuples */
     private ascendingPathsForTupleCombine() {
         if (this.allowedTypes === true)
-            return List<this>();
+            return List<[this, boolean, string]>();
 
         let allowedTypes = this.allowedTypes;
         return uniqueIndexPairs(allowedTypes.tupleLike.size)
             .map(([i, j]) => allowedTypes.tupleLike.remove(i).remove(j - 1).push(this.combineTuples(allowedTypes.tupleLike.get(i), allowedTypes.tupleLike.get(j))))
-            .map(tupleLike => this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: tupleLike}));
+            .map(tupleLike => <[this, boolean, string]>[this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: tupleLike}), true, "TUPLE-COMBINE"]);
     }
 
     private combineTuples(tuple1: Map<IndexT, Type>, tuple2: Map<IndexT, Type>) {
@@ -138,6 +139,6 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     }
 }
 
-function uniqueIndexPairs(n: number): Iterable<{}, [number, number]> {
-    return Range(0, n).flatMap(i => Range(i + 1, n).map(j => pair(i, j)));
+function uniqueIndexPairs(n: number) {
+    return Range(0, n).flatMap(i => Range(i + 1, n).map(j => <[number, number]>[i, j]));
 }

@@ -140,7 +140,6 @@ class TypeDeducerTest {
      * 2) See if "a" and "b" can be rounded up to "a"|"b".
      */
     @mocha.test
-    // @mocha.skip // TODO Fix with the lattice approach.
     testSimpleTypeDeducerRecursiveLiteralsCombine() {
         let typeDeducer = new SimpleTypeDeducer({roundUpFromBottom: false}, testOutputFile("testSimpleTypeDeducerRecursiveLiteralsCombine"));
         let calls = Map<string, Map<number, FunctionCalls>>([

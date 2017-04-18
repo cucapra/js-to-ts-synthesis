@@ -42,7 +42,7 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
     toDefinition() {
         if (this.values === true)
             return [this.getName()];
-        return this.values.toArray().map(n => JSON.stringify(n));
+        return this.values.sort().map(n => JSON.stringify(n)).toArray();
     }
 
     private valueNotInSet(): T {
@@ -61,15 +61,8 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
     protected abstract randomValue(): T;
 
     ascendingPaths([validator, params]: [Validator, RoundUpParameters]) {
-        if ((this.isBottom() && !params.roundUpFromBottom) || this.values === true || !validator.validate({value: () => this.valueNotInSet()}))
-            return List<this>();
-        return List<this>([this.newInstance(true)]);
-        /*
-        return List<Iterable<{}, this>>([
-            ascendingPathsToTop,
-            hinter
-                .filter(entry => !values.has(entry) && validator.validate({singleValue: true, value: () => entry}))
-                .map(entry => this.newInstance(values.add(entry)))
-        ]).flatMap(iterable => iterable);*/
+        if ((this.isBottom() && !params.roundUpFromBottom) || this.values === true)
+            return List<[this, boolean, string]>();
+        return List<[this, boolean, string]>().push([this.newInstance(true), validator.validate({value: () => this.valueNotInSet()}), "ROUND-TO-TOP"]);
     }
 }

@@ -173,16 +173,16 @@ export class Type implements TypeComponent<{}> {
      * The entire type has a parent in the lattice for every chance in any type component.
      * Loop through them in an arbitrary order.
      */
-    ascendingPaths(params: [Validator, RoundUpParameters]): Iterable<{}, this> {
+    ascendingPaths(params: [Validator, RoundUpParameters]): Iterable<{}, [this, boolean, string]> {
         return List([
-            this.nullType.ascendingPaths(params).map(t => this.update({nullType: t})),
-            this.undefinedType.ascendingPaths(params).map(t => this.update({undefinedType: t})),
-            this.booleanType.ascendingPaths(params).map(t => this.update({booleanType: t})),
-            this.numberType.ascendingPaths(params).map(t => this.update({numberType: t})),
-            this.stringType.ascendingPaths(params).map(t => this.update({stringType: t})),
-            this.functionType.ascendingPaths(params).map(t => this.update({functionType: t})),
-            this.arrayOrTupleType.ascendingPaths(params).map(t => this.update({arrayOrTupleType: t})),
-            this.objectType.ascendingPaths(params).map(t => this.update({objectType: t})),
+            this.nullType.ascendingPaths(params).map(([typeComponent, valid, rule]) => <[this, boolean, string]>[this.update({nullType: typeComponent}), valid, rule]),
+            this.undefinedType.ascendingPaths(params).map(([typeComponent, valid, rule]) => <[this, boolean, string]>[this.update({undefinedType: typeComponent}), valid, rule]),
+            this.booleanType.ascendingPaths(params).map(([typeComponent, valid, rule]) => <[this, boolean, string]>[this.update({booleanType: typeComponent}), valid, rule]),
+            this.numberType.ascendingPaths(params).map(([typeComponent, valid, rule]) => <[this, boolean, string]>[this.update({numberType: typeComponent}), valid, rule]),
+            this.stringType.ascendingPaths(params).map(([typeComponent, valid, rule]) => <[this, boolean, string]>[this.update({stringType: typeComponent}), valid, rule]),
+            this.functionType.ascendingPaths(params).map(([typeComponent, valid, rule]) => <[this, boolean, string]>[this.update({functionType: typeComponent}), valid, rule]),
+            this.arrayOrTupleType.ascendingPaths(params).map(([typeComponent, valid, rule]) => <[this, boolean, string]>[this.update({arrayOrTupleType: typeComponent}), valid, rule]),
+            this.objectType.ascendingPaths(params).map(([typeComponent, valid, rule]) => <[this, boolean, string]>[this.update({objectType: typeComponent}), valid, rule]),
         ]).flatMap(iterator => iterator);
     }
 };

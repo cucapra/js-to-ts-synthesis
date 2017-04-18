@@ -1,7 +1,6 @@
 import {List, Map} from "immutable";
 import {RecursiveTypeComponent} from "./RecursiveTypeComponent";
 import {Type} from "./Type";
-import {pair} from "./TypeComponent";
 
 export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: string]: {}}> {
 
@@ -13,7 +12,7 @@ export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: str
     }
 
     typeFor(obj: {[k: string]: {}}) {
-        return Map<string, Type>(Object.keys(obj).sort().map(key => pair(key, Type.bottom.include(obj[key]))));
+        return Map<string, Type>(Object.keys(obj).sort().map(key => [key, Type.bottom.include(obj[key])]));
     }
 
     definitionOfTopType() {
@@ -27,7 +26,7 @@ export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: str
     definitionOfTupleLikeType(type: Map<string, Type>) {
         if (type.isEmpty())
             return "object";
-        return "{" + type.map((type, key) => `${key}: ${type.toDefinition()}`).join(", ") + "}";
+        return "{" + type.keySeq().sort().map(key => `${key}: ${type.get(key).toDefinition()}`).join(", ") + "}";
     }
 
     emptyValue() {
