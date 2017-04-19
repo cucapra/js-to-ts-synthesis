@@ -3,6 +3,9 @@ import {Validator} from "../Validator";
 import {Type} from "./Type";
 import {RoundUpParameters, TypeComponent} from "./TypeComponent";
 
+// A type extended with an example value.
+export type TypeExt = [Type, {}];
+
 export abstract class RecursiveTypeComponent<IndexT extends number|string, T> implements TypeComponent<T> {
     /**
      * These types can be in one of two styles.
@@ -10,17 +13,20 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
      * 2) Array-like, where there is a type condition on every element in the type.
      *
      * This common implementation supports arrays/tuples and objects.
-     * In general, this can be a union of these, or the top type (any[] or object)
+     * In general, this can be a union of these, or the top type (any[] or object).
      */
-    constructor(private readonly allowedTypes: true | { readonly arrayLike: List<Type>, readonly tupleLike: List<Map<IndexT, Type>>}) {
+    constructor(private readonly allowedTypes: true | { readonly arrayLike: List<TypeExt>, readonly tupleLike: List<Map<IndexT, TypeExt>>}) {
     }
 
-    abstract newInstance(allowedTypes: true | { readonly arrayLike: List<Type>, readonly tupleLike: List<Map<IndexT, Type>>}): this;
+    abstract newInstance(allowedTypes: true | { readonly arrayLike: List<TypeExt>, readonly tupleLike: List<Map<IndexT, TypeExt>>}): this;
 
-    protected abstract typeFor(value: T): Map<IndexT, Type>
+    protected abstract typeFor(value: T): Map<IndexT, TypeExt>
     protected abstract definitionOfTopType(): string;
-    protected abstract definitionOfArrayLikeType(type: Type): string;
-    protected abstract definitionOfTupleLikeType(type: Map<IndexT, Type>): string;
+    protected abstract definitionOfArrayLikeType(type: TypeExt): string;
+    protected abstract definitionOfTupleLikeType(type: Map<IndexT, TypeExt>): string;
+
+    protected abstract valueForArrayLikeType(type: TypeExt): T;
+    protected abstract valueForTupleLikeType(type: Map<IndexT, TypeExt>): T;
 
     protected abstract emptyValue(): T;
 
@@ -49,16 +55,16 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
             && this.tupleLikeIsSubtypeOf(this.allowedTypes.tupleLike, other.allowedTypes.tupleLike));
     }
 
-    private arrayLikeIsSubtypeOf(thisArrayLike: List<Type>, otherArrayLike: List<Type>): boolean {
-        return thisArrayLike.every(thisType => otherArrayLike.some(otherType => thisType.isSubtypeOf(otherType)));
+    private arrayLikeIsSubtypeOf(thisArrayLike: List<[Type, {}]>, otherArrayLike: List<[Type, {}]>): boolean {
+        return thisArrayLike.every(([thisType]) => otherArrayLike.some(([otherType]) => thisType.isSubtypeOf(otherType)));
     }
 
-    private tupleLikeIsSubtypeOf(thisTupleLike: List<Map<IndexT, Type>>, otherTupleLike: List<Map<IndexT, Type>>): boolean {
+    private tupleLikeIsSubtypeOf(thisTupleLike: List<Map<IndexT, [Type, {}]>>, otherTupleLike: List<Map<IndexT, [Type, {}]>>): boolean {
         return thisTupleLike.every(thisTuple => otherTupleLike.some(otherTuple => this.tupleIsSubtypeOf(thisTuple, otherTuple)));
     }
 
-    private tupleIsSubtypeOf(thisTuple: Map<IndexT, Type>, otherTuple: Map<IndexT, Type>) {
-        return otherTuple.every((type, key) => thisTuple.has(key) && thisTuple.get(key).isSubtypeOf(type));
+    private tupleIsSubtypeOf(thisTuple: Map<IndexT, [Type, {}]>, otherTuple: Map<IndexT, [Type, {}]>) {
+        return otherTuple.every(([type], key) => thisTuple.has(key) && thisTuple.get(key)[0].isSubtypeOf(type));
     }
 
     includeAll() {
@@ -66,7 +72,7 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     }
 
     excludeAll() {
-        return this.newInstance({arrayLike: List<Type>(), tupleLike: List<Map<IndexT, Type>>()});
+        return this.newInstance({arrayLike: List<TypeExt>(), tupleLike: List<Map<IndexT, TypeExt>>()});
     }
 
     isTop() {
@@ -101,7 +107,8 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     ascendingPaths([validator, params]: [Validator, RoundUpParameters]) {
         return List([
             this.recursiveTupleLikeAscendingPaths(validator, params),
-            this.ascendingPathsForTupleCombine()
+            this.ascendingPathsForTupleCombine(),
+            this.ascendingPathsForFieldRemove(validator)
         ]).flatMap(iterable => iterable);
     }
 
@@ -113,14 +120,23 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
         let allowedTypes = this.allowedTypes;
         return allowedTypes.tupleLike.keySeq()
             .flatMap(index => this.recursiveAscendingPathsForTuple(allowedTypes.tupleLike.get(index), validator, params)
-                .map(([ascTuple, valid]) => <[this, boolean, string]>[this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.set(index, ascTuple)}), valid, "RECURSIVE-TUPLE"]));
+                .map(([ascTuple, valid, ascRule]) => <[this, boolean, string]>[
+                    this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.set(index, ascTuple)}),
+                    valid,
+                    `RECURSIVE-TUPLE(${ascRule})`]));
     }
 
     /** Take the ascending paths for each underlying type, and return this same tuple with the new type in the old type's place. */
-    private recursiveAscendingPathsForTuple(tuple: Map<IndexT, Type>, validator: Validator, params: RoundUpParameters) {
+    private recursiveAscendingPathsForTuple(tuple: Map<IndexT, TypeExt>, validator: Validator, params: RoundUpParameters) {
         return tuple.keySeq()
-            .flatMap(key => tuple.get(key).ascendingPaths([validator.forSubExpression(key), params])
-                .map(([ascType, valid]) => <[Map<IndexT, Type>, boolean]>[tuple.set(key, ascType), valid]));
+            .flatMap(key => {
+                let [type, value] = tuple.get(key);
+                return type.ascendingPaths([validator.forSubExpression(key), params])
+                    .map(([ascType, valid, ascRule]) => <[Map<IndexT, TypeExt>, boolean, string]>[
+                        tuple.set(key, [ascType, value]),
+                        valid,
+                        ascRule]);
+            });
     }
 
     /** Can combine any two tuples */
@@ -131,11 +147,31 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
         let allowedTypes = this.allowedTypes;
         return uniqueIndexPairs(allowedTypes.tupleLike.size)
             .map(([i, j]) => allowedTypes.tupleLike.remove(i).remove(j - 1).push(this.combineTuples(allowedTypes.tupleLike.get(i), allowedTypes.tupleLike.get(j))))
-            .map(tupleLike => <[this, boolean, string]>[this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: tupleLike}), true, "TUPLE-COMBINE"]);
+            .map(tupleLike => <[this, boolean, string]>[
+                this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: tupleLike}),
+                true,
+                "TUPLE-COMBINE"]);
     }
 
-    private combineTuples(tuple1: Map<IndexT, Type>, tuple2: Map<IndexT, Type>) {
-        return tuple1.mergeWith((type1, type2) => type1.includeType(type2), tuple2);
+    private combineTuples(tuple1: Map<IndexT, TypeExt>, tuple2: Map<IndexT, TypeExt>) {
+        return tuple1.mergeWith(([type1, value1], [type2]) => [type1.includeType(type2), value1], tuple2);
+    }
+
+    private ascendingPathsForFieldRemove(validator: Validator) {
+        if (this.allowedTypes === true || this.allowedTypes.tupleLike.size === 0)
+            return List<[this, boolean, string]>();
+
+        let allowedTypes = this.allowedTypes;
+        return this.allowedTypes.tupleLike.keySeq()
+            .filter(index => !allowedTypes.tupleLike.get(index).isEmpty())
+            .map(index => {
+                let key = allowedTypes.tupleLike.get(index).keySeq().max();
+                let updTuple = allowedTypes.tupleLike.get(index).remove(key);
+                return <[this, boolean, string]>[
+                    this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.update(index, tuple => tuple.remove(tuple.keySeq().max()))}),
+                    validator.validate({singleValue: true, value: () => this.valueForTupleLikeType(updTuple)}),
+                    "TUPLE-FIELD-REMOVE"];
+            });
     }
 }
 

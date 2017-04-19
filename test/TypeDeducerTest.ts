@@ -170,6 +170,38 @@ class TypeDeducerTest {
         });
     }
 
+    @mocha.test
+    testSimpleTypeDeducerMultipleSteps() {
+        let typeDeducer = new SimpleTypeDeducer({roundUpFromBottom: false}, testOutputFile("testSimpleTypeDeducerMultipleSteps"));
+        let calls = Map<string, Map<number, FunctionCalls>>([
+            [
+                "sample.js",
+                Map<number, FunctionCalls>([
+                    [
+                        1,
+                        {
+                            file: "sample.js",
+                            info: new FunctionInfo("f", (obj: {}) => {
+                                void "id=1";
+                                function hasX(obj: {}): obj is {x: {}} { return "x" in obj; }
+                                if (!(hasX(obj)))
+                                    throw TypeError();
+                            }),
+                            calls: [
+                                {args: [{x: 0, y: 1}], returnValue: undefined},
+                                {args: [{x: 0, z: 1}], returnValue: undefined},
+                            ]
+                        }
+                    ]
+                ])
+            ]
+        ]);
+
+        assert.deepEqual(toDefinitions(typeDeducer.getAllTypeDefinitions(calls)), {
+            "sample.js": ["export declare function f(obj: {x: number}): undefined;\n"]
+        });
+    }
+
     /**
      * NOT YET WORKING
      *

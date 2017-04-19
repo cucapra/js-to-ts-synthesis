@@ -42,13 +42,13 @@ end`, {flag: "a"});
         if (sourceId === undefined)
             graph.push(`${id}["${definition}"]`);
         else
-            graph.push(`${sourceId}-->|${rule}|${id}["${definition}"]`);
+            graph.push(`${sourceId}-->|"${rule}"|${id}["${definition}"]`);
 
         let result = element;
         element.ascendingPaths(params).forEach(([ascElement, valid, rule]) => {
             if (!valid) {
                 let ascId = ++this.id;
-                graph.push(`${id}-->|${rule}|${ascId}["${definitionAsString(ascElement.toDefinition())}"]`);
+                graph.push(`${id}-->|"${rule}"|${ascId}["${definitionAsString(ascElement.toDefinition())}"]`);
                 graph.push(`style ${ascId} stroke:#f66;`);
                 return true;
             }
