@@ -44,4 +44,8 @@ export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: str
     emptyValue() {
         return {};
     }
+
+    tupleLikeRemoveIsPrefixRestricted() {
+        return false;
+    }
 }

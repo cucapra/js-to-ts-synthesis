@@ -38,6 +38,10 @@ export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, {}
         return arrayType.map(([_, value]) => value).toArray();
     }
 
+    tupleLikeRemoveIsPrefixRestricted() {
+        return true;
+    }
+
     emptyValue(): {}[] {
         return [];
     }

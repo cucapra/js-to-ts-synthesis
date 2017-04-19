@@ -17,6 +17,8 @@ export interface LatticeElement<ParamsT> {
     toDefinition(): string | string[];
 }
 
+const BAD_COLOR = "#f00", GOOD_COLOR = "#0f0";
+
 export class Lattice<T extends LatticeElement<ParamsT>, ParamsT> {
 
     private id = 0;
@@ -45,16 +47,21 @@ end`, {flag: "a"});
             graph.push(`${sourceId}-->|"${rule}"|${id}["${definition}"]`);
 
         let result = element;
+        let resultUpdated = false;
         element.ascendingPaths(params).forEach(([ascElement, valid, rule]) => {
             if (!valid) {
                 let ascId = ++this.id;
                 graph.push(`${id}-->|"${rule}"|${ascId}["${definitionAsString(ascElement.toDefinition())}"]`);
-                graph.push(`style ${ascId} stroke:#f66;`);
+                graph.push(`style ${ascId} stroke:${BAD_COLOR};`);
                 return true;
             }
             result = this.walkRecursive(ascElement, params, rule, graph, id);
+            resultUpdated = true;
             return false;
         });
+
+        if (!resultUpdated)
+            graph.push(`style ${id} stroke:${GOOD_COLOR}`);
         return result;
     }
 }

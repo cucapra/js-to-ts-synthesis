@@ -28,6 +28,12 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     protected abstract valueForArrayLikeType(type: TypeExt): T;
     protected abstract valueForTupleLikeType(type: Map<IndexT, TypeExt>): T;
 
+    /**
+     * True for tuples (since [t1, t2] is valid, but [?, t2] isn't)
+     * False for objects (since {x: t1, y: y2} -> {y: y2} is valid)
+     */
+    protected abstract tupleLikeRemoveIsPrefixRestricted(): boolean;
+
     protected abstract emptyValue(): T;
 
     include(value: T) {
@@ -164,13 +170,14 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
         let allowedTypes = this.allowedTypes;
         return this.allowedTypes.tupleLike.keySeq()
             .filter(index => !allowedTypes.tupleLike.get(index).isEmpty())
-            .map(index => {
-                let key = allowedTypes.tupleLike.get(index).keySeq().max();
-                let updTuple = allowedTypes.tupleLike.get(index).remove(key);
-                return <[this, boolean, string]>[
-                    this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.update(index, tuple => tuple.remove(tuple.keySeq().max()))}),
-                    validator.validate({singleValue: true, value: () => this.valueForTupleLikeType(updTuple)}),
-                    "TUPLE-FIELD-REMOVE"];
+            .flatMap(index => {
+                let tuple = allowedTypes.tupleLike.get(index);
+                let validKeysToRemove = this.tupleLikeRemoveIsPrefixRestricted() ? List([tuple.keySeq().max()]) : tuple.keySeq();
+                return validKeysToRemove.map(key => <[this, boolean, string]>[
+                    this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.set(index, tuple.remove(key))}),
+                    validator.validate({singleValue: true, value: () => this.valueForTupleLikeType(tuple.remove(key))}),
+                    "TUPLE-FIELD-REMOVE"
+                ]);
             });
     }
 }
