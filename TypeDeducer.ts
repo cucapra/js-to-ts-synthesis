@@ -25,8 +25,14 @@ export class FunctionTypeDefinition {
     }
 }
 
+export interface TypeDeducerParameters {
+    roundUpParameters: RoundUpParameters;
+    folderToWriteDebugging: string;
+    generateImageForTypeRounding: boolean;
+}
+
 export abstract class TypeDeducer {
-    constructor(protected parameters: RoundUpParameters, protected fileToWriteDebugging: string) {}
+    constructor(protected parameters: TypeDeducerParameters) {}
 
     getAllTypeDefinitions(executions: FunctionsMap<FunctionCalls>): FunctionsMap<FunctionTypeDefinition> {
         return executions.map(m => m.map(functionCalls => this.getTypeFor(functionCalls)).toMap()).toMap();

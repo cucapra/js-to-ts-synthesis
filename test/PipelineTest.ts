@@ -8,14 +8,12 @@ import {LowerBoundTypeDeducer} from "../LowerBoundTypeDeducer";
 import {NullTypeDeducer} from "../NullTypeDeducer";
 import {Pipeline} from "../Pipeline";
 import {SimpleTypeDeducer} from "../SimpleTypeDeducer";
-import {testOutputFile} from "./test_output";
+import {parameters} from "./test_output";
 
 const TEST_TIMEOUT_WINDOW = 60000;
 
 const GIT_URL_PARSE_EXPECTED_LOWER = fs.readFileSync(path.join(__dirname, "/git-url-parse.expected.lower.d.ts"), "utf-8");
 const GIT_URL_PARSE_EXPECTED_SIMPLE = fs.readFileSync(path.join(__dirname, "/git-url-parse.expected.simple.d.ts"), "utf-8");
-
-const DEFAULT_ROUND_UP_PARAMETERS = {roundUpFromBottom: false};
 
 @mocha.suite
 class PipelineTest {
@@ -31,7 +29,7 @@ class PipelineTest {
         let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse",
             workingDir,
             TEST_TIMEOUT_WINDOW,
-            new NullTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testBadTypeDeducerPipeline")),
+            new NullTypeDeducer(parameters("testBadTypeDeducerPipeline")),
             {treatAllErrorsAsTypeErrors: true});
 
         assert.throws(() => {pipeline.run(); });
@@ -44,7 +42,7 @@ class PipelineTest {
         let pipeline = new Pipeline("https://github.com/IonicaBizau/git-url-parse",
             workingDir,
             TEST_TIMEOUT_WINDOW,
-            new LowerBoundTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testLowerBoundTypeDeducerPipeline")),
+            new LowerBoundTypeDeducer(parameters("testLowerBoundTypeDeducerPipeline")),
             {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 
@@ -69,7 +67,7 @@ class PipelineTest {
         let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse",
             workingDir,
             TEST_TIMEOUT_WINDOW,
-            new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testSimpleTypeDeducerPipeline")),
+            new SimpleTypeDeducer(parameters("testSimpleTypeDeducerPipeline")),
             {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 
@@ -84,7 +82,7 @@ class PipelineTest {
         let pipeline = new Pipeline("https://github.com/lelylan/simple-oauth2",
             workingDir,
             TEST_TIMEOUT_WINDOW,
-            new SimpleTypeDeducer(DEFAULT_ROUND_UP_PARAMETERS, testOutputFile("testModuleThatExportsAnObjectPipeline")),
+            new SimpleTypeDeducer(parameters("testModuleThatExportsAnObjectPipeline")),
             {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 
