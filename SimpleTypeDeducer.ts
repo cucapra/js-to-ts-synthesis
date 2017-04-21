@@ -16,8 +16,9 @@ export class SimpleTypeDeducer extends LowerBoundTypeDeducer {
         let folderToWriteDebugging = this.parameters.folderToWriteDebugging;
         if (!fs.existsSync(folderToWriteDebugging))
             fs.mkdirSync(folderToWriteDebugging);
-        let latticeOutputFile = path.join(folderToWriteDebugging, "lattice.graph");
-        let lattice = new Lattice<Type, [Validator, RoundUpParameters]>(latticeOutputFile);
+        let latticeOutputGraphFile = path.join(folderToWriteDebugging, "lattice.graph");
+        let latticeOutputValidatorFile = path.join(folderToWriteDebugging, "validation_examples.txt");
+        let lattice = new Lattice<Type, [Validator, RoundUpParameters]>(latticeOutputGraphFile, latticeOutputValidatorFile);
 
         for (let i = 0; i < definition.argTypes.length; i++) {
             definition.argTypes[i] = lattice.walk(definition.argTypes[i], [new ArgValidator(calls.info, calls.calls, i), this.parameters.roundUpParameters], definition.calls.info.args[i].name);
@@ -26,7 +27,7 @@ export class SimpleTypeDeducer extends LowerBoundTypeDeducer {
         definition.returnValueType = lattice.walk(definition.returnValueType, [new NoopValidator(), this.parameters.roundUpParameters], "<return>");
 
         if (this.parameters.generateImageForTypeRounding) {
-            let command = `mermaid -o ${folderToWriteDebugging} ${latticeOutputFile}`;
+            let command = `mermaid -o ${folderToWriteDebugging} ${latticeOutputGraphFile}`;
             console.log(`Running command [${command}]`);
             try {
                 child_process.execSync(command);

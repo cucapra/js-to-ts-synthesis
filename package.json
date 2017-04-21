@@ -27,6 +27,7 @@
     "escape-quotes": "^1.0.2",
     "immutable": "^3.8.1",
     "js-beautify": "^1.6.11",
+    "letters": "0.0.2",
     "line-reader-sync": "^0.1.0",
     "logic-solver": "^2.0.1",
     "option.ts": "^0.3.0",

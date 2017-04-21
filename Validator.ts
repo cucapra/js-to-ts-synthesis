@@ -12,7 +12,11 @@ export interface ValueProvider {
 }
 
 export abstract class Validator {
-    abstract validate(valueProvider: ValueProvider): boolean;
+    /**
+     * Return true, if the values are ok, or false if it encounters a problem when running the test.
+     * Include the set of values used to make the determination (which will be always be 1 for failures, but possible more for successes)
+     */
+    abstract validate(valueProvider: ValueProvider): [boolean, {}[]];
 
     forSubExpression(property: KeyType) {
         return new SubExpressionValidator(this, property);
@@ -23,7 +27,7 @@ export abstract class Validator {
 export class NoopValidator extends Validator {
 
     validate(valueProvider: ValueProvider) {
-        return true;
+        return <[boolean, {}[]]>[true, []];
     }
 }
 
@@ -33,26 +37,31 @@ export class ArgValidator extends Validator {
         super();
     }
 
-    validate(valueProvider: ValueProvider): boolean {
+    validate(valueProvider: ValueProvider) {
 
         if (this.arg >= this.functionInfo.args.length)
             throw Error(`Argument ${this.arg} out of bounds`);
 
         let timesToRun = valueProvider.singleValue ? 1 : NUM_INVOCATIONS;
+        let succeedingExamples = [];
+
         for (let i = 0; i < timesToRun; i++) {
             /**
              * Need a deep clone of the arguments for two reasons.
              * 1) Calling the function can have side effects that mutate the arguments.
              * 2) Recursive validation may require manipulating arguments rather than replacing them.
              */
-            let args = deepClone(this.testCalls[Math.floor(Math.random() * this.testCalls.length)].args);
-            args[this.arg] = valueProvider.value(args[this.arg]);
+            let args: {}[] = deepClone(this.testCalls[Math.floor(Math.random() * this.testCalls.length)].args);
+            let valueToTest = valueProvider.value(args[this.arg]);
+            args[this.arg] = deepClone(valueProvider.value(args[this.arg]));
 
             if (!this.functionInfo.run(args))
-                return false;
+                return <[boolean, {}[]]>[false, args];
+
+            succeedingExamples.push(valueToTest);
         }
 
-        return true;
+        return <[boolean, {}[]]>[true, succeedingExamples];
     }
 }
 

@@ -121,15 +121,16 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     /** Take the ascending paths for each tuple, and return this same type with the new tuple in the old one's place. */
     private recursiveTupleLikeAscendingPaths(validator: Validator, params: RoundUpParameters) {
         if (this.allowedTypes === true)
-            return List<[this, boolean, string]>();
+            return List<[this, boolean, string, {}[]]>();
 
         let allowedTypes = this.allowedTypes;
         return allowedTypes.tupleLike.keySeq()
             .flatMap(index => this.recursiveAscendingPathsForTuple(allowedTypes.tupleLike.get(index), validator, params)
-                .map(([ascTuple, valid, ascRule]) => <[this, boolean, string]>[
+                .map(([ascTuple, valid, ascRule, examples]) => <[this, boolean, string, {}[]]>[
                     this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.set(index, ascTuple)}),
                     valid,
-                    `RECURSIVE-TUPLE(${ascRule})`]));
+                    `RECURSIVE-TUPLE(${ascRule})`,
+                    examples]));
     }
 
     /** Take the ascending paths for each underlying type, and return this same tuple with the new type in the old type's place. */
@@ -138,25 +139,27 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
             .flatMap(key => {
                 let [type, value] = tuple.get(key);
                 return type.ascendingPaths([validator.forSubExpression(key), params])
-                    .map(([ascType, valid, ascRule]) => <[Map<IndexT, TypeExt>, boolean, string]>[
+                    .map(([ascType, valid, ascRule, examples]) => <[Map<IndexT, TypeExt>, boolean, string, {}[]]>[
                         tuple.set(key, [ascType, value]),
                         valid,
-                        ascRule]);
+                        ascRule,
+                        examples]);
             });
     }
 
     /** Can combine any two tuples */
     private ascendingPathsForTupleCombine() {
         if (this.allowedTypes === true)
-            return List<[this, boolean, string]>();
+            return List<[this, boolean, string, {}[]]>();
 
         let allowedTypes = this.allowedTypes;
         return uniqueIndexPairs(allowedTypes.tupleLike.size)
             .map(([i, j]) => allowedTypes.tupleLike.remove(i).remove(j - 1).push(this.combineTuples(allowedTypes.tupleLike.get(i), allowedTypes.tupleLike.get(j))))
-            .map(tupleLike => <[this, boolean, string]>[
+            .map(tupleLike => <[this, boolean, string, {}[]]>[
                 this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: tupleLike}),
                 true,
-                "TUPLE-COMBINE"]);
+                "TUPLE-COMBINE",
+                []]);
     }
 
     private combineTuples(tuple1: Map<IndexT, TypeExt>, tuple2: Map<IndexT, TypeExt>) {
@@ -165,7 +168,7 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
 
     private ascendingPathsForFieldRemove(validator: Validator) {
         if (this.allowedTypes === true || this.allowedTypes.tupleLike.size === 0)
-            return List<[this, boolean, string]>();
+            return List<[this, boolean, string, {}[]]>();
 
         let allowedTypes = this.allowedTypes;
         return this.allowedTypes.tupleLike.keySeq()
@@ -173,11 +176,15 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
             .flatMap(index => {
                 let tuple = allowedTypes.tupleLike.get(index);
                 let validKeysToRemove = this.tupleLikeRemoveIsPrefixRestricted() ? List([tuple.keySeq().max()]) : tuple.keySeq();
-                return validKeysToRemove.map(key => <[this, boolean, string]>[
-                    this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.set(index, tuple.remove(key))}),
-                    validator.validate({singleValue: true, value: () => this.valueForTupleLikeType(tuple.remove(key))}),
-                    "TUPLE-FIELD-REMOVE"
-                ]);
+                return validKeysToRemove.map(key => {
+                    let [valid, examples] = validator.validate({singleValue: true, value: () => this.valueForTupleLikeType(tuple.remove(key))});
+                    return <[this, boolean, string, {}[]]>[
+                        this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.set(index, tuple.remove(key))}),
+                        valid,
+                        "TUPLE-FIELD-REMOVE",
+                        examples
+                    ];
+                });
             });
     }
 }

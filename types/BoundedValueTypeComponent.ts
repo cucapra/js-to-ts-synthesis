@@ -44,12 +44,15 @@ export abstract class BoundedValueTypeComponent<T> implements TypeComponent<T> {
         return this.allowedValues.filter(allowed => allowed).map((allowed, value) => this.nameFor(value)).toArray();
     }
 
-    ascendingPaths([validator, params]: [Validator, RoundUpParameters]): Iterable<{}, [this, boolean, string]> {
+    ascendingPaths([validator, params]: [Validator, RoundUpParameters]): Iterable<{}, [this, boolean, string, {}[]]> {
         if (this.isBottom() && !params.roundUpFromBottom)
-            return List<[this, boolean, string]>();
+            return List<[this, boolean, string, {}[]]>();
         return this.allowedValues
             .filter(allowed => !allowed)
-            .map((allowed, value) => <[this, boolean, string]>[this.include(value), validator.validate({singleValue: true, value: () => value}), "INCLUDE-VALUE"]);
+            .map((allowed, value) => {
+                let [valid, examples] = validator.validate({singleValue: true, value: () => value});
+                return <[this, boolean, string, {}[]]>[this.include(value), valid, "INCLUDE-VALUE", examples];
+            });
     }
 
     protected abstract getName(): string;

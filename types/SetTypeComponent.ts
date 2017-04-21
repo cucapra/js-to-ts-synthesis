@@ -62,7 +62,12 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
 
     ascendingPaths([validator, params]: [Validator, RoundUpParameters]) {
         if ((this.isBottom() && !params.roundUpFromBottom) || this.values === true)
-            return List<[this, boolean, string]>();
-        return List<[this, boolean, string]>([<[this, boolean, string]>[this.newInstance(true), validator.validate({value: () => this.valueNotInSet()}), "ROUND-TO-TOP"]]);
+            return List<[this, boolean, string, {}[]]>();
+
+        return List([undefined]).toSeq()
+            .map(() => {
+                let [valid, examples] = validator.validate({value: () => this.valueNotInSet()});
+                return <[this, boolean, string, {}[]]>[this.newInstance(true), valid, "ROUND-TO-TOP", examples];
+            });
     }
 }
