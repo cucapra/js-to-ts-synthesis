@@ -54,6 +54,39 @@ class TypeDeducerTest {
     }
 
     /**
+     * Ensure the type representation doesn't have redundancies.
+     * Specifically, types t1 and t2 shouldn't appear in the same definition if one is a subtype of the other.
+     */
+    @mocha.test
+    testNoRedundanciesInTypeRepresentation() {
+        let typeDeducer = new LowerBoundTypeDeducer(parameters("testNoRedundanciesInTypeRepresentation"));
+        let calls = Map<string, Map<number, FunctionCalls>>([
+            [
+                "sample.js",
+                Map<number, FunctionCalls>([
+                    [
+                        1,
+                        {
+                            file: "sample.js",
+                            info: new FunctionInfo("f", (x: {}) => {
+                                void "id=1";
+                            }),
+                            calls: [
+                                {args: [{x: 1}], returnValue: undefined},
+                                {args: [{x: 1, y: 1}], returnValue: undefined}
+                            ]
+                        }
+                    ]
+                ])
+            ]
+        ]);
+
+        assert.deepEqual(toDefinitions(typeDeducer.getAllTypeDefinitions(calls)), {
+            "sample.js": ["export declare function f(x: {x: 1}): undefined;\n"]
+        });
+    }
+
+    /**
      * UpperBoundTypeDeducer should ignore the test cases and just look for typeof checks at the beginning of the function implementation.
      * TODO: Consider if we really need this.
      */

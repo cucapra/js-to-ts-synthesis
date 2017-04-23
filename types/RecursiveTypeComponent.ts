@@ -56,17 +56,70 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     }
 
     isSubtypeOf(other: this) {
-        return other.allowedTypes === true || (this.allowedTypes !== true
-            && this.arrayLikeIsSubtypeOf(this.allowedTypes.arrayLike, other.allowedTypes.arrayLike)
-            && this.tupleLikeIsSubtypeOf(this.allowedTypes.tupleLike, other.allowedTypes.tupleLike));
+        if (other.allowedTypes === true)
+            return true;
+        if (this.allowedTypes === true)
+            return false;
+
+        let otherAllowedTypes = other.allowedTypes;
+
+        let arrayLikeIsSubtypeOf = this.allowedTypes.arrayLike.every(([thisType]) => otherAllowedTypes.arrayLike.some(([otherType]) => thisType.isSubtypeOf(otherType)));
+        if (!arrayLikeIsSubtypeOf)
+            return false;
+
+        let tupleLikeIsSubtypeOf = this.allowedTypes.tupleLike.every(thisTuple => otherAllowedTypes.tupleLike.some(otherTuple => this.tupleIsSubtypeOf(thisTuple, otherTuple)));
+        if (!tupleLikeIsSubtypeOf)
+            return false;
+
+        return true;
     }
 
-    private arrayLikeIsSubtypeOf(thisArrayLike: List<[Type, {}]>, otherArrayLike: List<[Type, {}]>): boolean {
-        return thisArrayLike.every(([thisType]) => otherArrayLike.some(([otherType]) => thisType.isSubtypeOf(otherType)));
-    }
+    /**
+     * Returns a new RecursiveTypeComponent with the following properties:
+     * 1) No two types in arrayLike have a subtype relationship.
+     * 2) No two types in tupleLike have a subtype relationship.
+     */
+    condenseInternalRepresentation() {
+        if (this.allowedTypes === true)
+            return this;
+        let allowedTypes = this.allowedTypes;
 
-    private tupleLikeIsSubtypeOf(thisTupleLike: List<Map<IndexT, [Type, {}]>>, otherTupleLike: List<Map<IndexT, [Type, {}]>>): boolean {
-        return thisTupleLike.every(thisTuple => otherTupleLike.some(otherTuple => this.tupleIsSubtypeOf(thisTuple, otherTuple)));
+        let arrayLike = List<TypeExt>().withMutations(arrayLike => {
+            for (let i = 0; i < allowedTypes.arrayLike.size; i++) {
+                let [type, value] = allowedTypes.arrayLike.get(i);
+                type = type.condenseInternalRepresentation();
+
+                if (arrayLike.every(([type0]) => !type.isSubtypeOf(type0))) {
+
+                    // New element is a candidate for adding.
+                    // Remove every element that would be a subtype of this new type.
+                    for (let i = 0; i < arrayLike.size; i++) {
+                        if (arrayLike.get(i) !== undefined && arrayLike.get(i)[0].isSubtypeOf(type))
+                            arrayLike.set(i, undefined); // Can't use delete with `withMutations`
+                    }
+
+                    arrayLike.push([type, value]);
+                }
+            }
+        }).filter(e => e !== undefined).toList();
+
+        let tupleLike = List<Map<IndexT, TypeExt>>().withMutations(tupleLike => {
+            for (let i = 0; i < allowedTypes.tupleLike.size; i++) {
+                let tuple = allowedTypes.tupleLike.get(i).map(([type, value]) => <TypeExt>[type.condenseInternalRepresentation(), value]).toMap();
+
+                if (tupleLike.every(tuple0 => !this.tupleIsSubtypeOf(tuple, tuple0))) {
+
+                    for (let i = 0; i < tupleLike.size; i++) {
+                        if (tupleLike.get(i) !== undefined && this.tupleIsSubtypeOf(tupleLike.get(i), tuple))
+                            tupleLike.set(i, undefined);
+                    }
+
+                    tupleLike.push(tuple);
+                }
+            }
+        }).filter(e => e !== undefined).toList();
+
+        return this.newInstance({arrayLike: arrayLike, tupleLike: tupleLike});
     }
 
     private tupleIsSubtypeOf(thisTuple: Map<IndexT, [Type, {}]>, otherTuple: Map<IndexT, [Type, {}]>) {

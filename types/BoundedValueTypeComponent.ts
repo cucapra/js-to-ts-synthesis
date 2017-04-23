@@ -22,6 +22,10 @@ export abstract class BoundedValueTypeComponent<T> implements TypeComponent<T> {
         return this.allowedValues.every((allowed, value) => !allowed || other.allowedValues.get(value));
     }
 
+    condenseInternalRepresentation() {
+        return this;
+    }
+
     includeAll() {
         return this.newInstance(this.allowedValues.map(() => true).toMap());
     }

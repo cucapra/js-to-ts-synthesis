@@ -56,7 +56,7 @@ export class ArgValidator extends Validator {
             args[this.arg] = deepClone(valueProvider.value(args[this.arg]));
 
             if (!this.functionInfo.run(args))
-                return <[boolean, {}[]]>[false, args];
+                return <[boolean, {}[]]>[false, valueToTest];
 
             succeedingExamples.push(valueToTest);
         }
