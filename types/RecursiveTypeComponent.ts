@@ -154,6 +154,7 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
      * Valid transformations include:
      * 1) Changing any component of any tuple type.
      * 2) Combining two tuple types.
+     * 3) Removing fields from a tuple.
      */
     ascendingPaths([validator, params]: [Validator, RoundUpParameters]) {
         return List([
