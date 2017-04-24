@@ -1,6 +1,5 @@
 import {Iterable, List, Set} from "immutable";
 import {Validator} from "../Validator";
-import {handle} from "../Value";
 import {ArrayOrTupleTypeComponent} from "./ArrayOrTupleTypeComponent";
 import {BooleanTypeComponent} from "./BooleanTypeComponent";
 import {FunctionTypeComponent} from "./FunctionTypeComponent";
@@ -24,6 +23,10 @@ class TypeDefinitionBuilder {
     toDefinition() {
         return (this.pieces.length > 0) ? this.pieces.join("|") : "never";
     }
+}
+
+function isNull(value: {}): value is null {
+    return value === null;
 }
 
 export class Type implements TypeComponent<{}> {
@@ -170,16 +173,21 @@ export class Type implements TypeComponent<{}> {
     }
 
     include(value: {}): this {
-        return handle<this>(value, {
-            null: (value => this.update({nullType: this.nullType.include(value)})),
-            undefined: (value => this.update({undefinedType: this.undefinedType.include(value)})),
-            boolean: (value => this.update({booleanType: this.booleanType.include(value)})),
-            number: (value => this.update({numberType: this.numberType.include(value)})),
-            string: (value => this.update({stringType: this.stringType.include(value)})),
-            function: (value => this.update({functionType: this.functionType.include(value)})),
-            array: (value => this.update({arrayOrTupleType: this.arrayOrTupleType.include(value)})),
-            object: (value => this.update({objectType: this.objectType.include(value)}))
-        });
+        if (isNull(value))
+            return this.update({nullType: this.nullType.include(value)});
+        if (typeof value === "undefined")
+            return this.update({undefinedType: this.undefinedType.include(value)});
+        if (typeof value === "boolean")
+            return this.update({booleanType: this.booleanType.include(value)});
+        if (typeof value === "number")
+            return this.update({numberType: this.numberType.include(value)});
+        if (typeof value === "string")
+            return this.update({stringType: this.stringType.include(value)});
+        if (typeof value === "function")
+            return this.update({functionType: this.functionType.include(value)});
+        if (typeof value === "object")
+            return Array.isArray(value) ? this.update({arrayOrTupleType: this.arrayOrTupleType.include(value)}) : this.update({objectType: this.objectType.include(value)});
+        throw new Error(`Cannot convert ${typeof value}: ${value}`);
     }
 
     /**

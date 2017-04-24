@@ -126,14 +126,6 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
         return otherTuple.every(([type], key) => thisTuple.has(key) && thisTuple.get(key)[0].isSubtypeOf(type));
     }
 
-    includeAll() {
-        return this.newInstance(true);
-    }
-
-    excludeAll() {
-        return this.newInstance({arrayLike: List<TypeExt>(), tupleLike: List<Map<IndexT, TypeExt>>()});
-    }
-
     isTop() {
         return this.allowedTypes === true;
     }
@@ -207,12 +199,14 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
 
         let allowedTypes = this.allowedTypes;
         return uniqueIndexPairs(allowedTypes.tupleLike.size)
-            .map(([i, j]) => allowedTypes.tupleLike.remove(i).remove(j - 1).push(this.combineTuples(allowedTypes.tupleLike.get(i), allowedTypes.tupleLike.get(j))))
-            .map(tupleLike => <[this, boolean, string, {}[]]>[
-                this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: tupleLike}),
-                true,
-                "TUPLE-COMBINE",
-                []]);
+            .map(([i, j]) => {
+                let tupleLike = allowedTypes.tupleLike.remove(i).remove(j - 1).push(this.combineTuples(allowedTypes.tupleLike.get(i), allowedTypes.tupleLike.get(j)));
+                return <[this, boolean, string, {}[]]>[
+                    this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: tupleLike}),
+                    true,
+                    "TUPLE-COMBINE",
+                    []];
+            });
     }
 
     private combineTuples(tuple1: Map<IndexT, TypeExt>, tuple2: Map<IndexT, TypeExt>) {

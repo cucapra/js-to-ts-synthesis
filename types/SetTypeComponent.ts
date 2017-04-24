@@ -27,14 +27,6 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
         return this;
     }
 
-    includeAll() {
-        return this.newInstance(true);
-    }
-
-    excludeAll() {
-        return this.newInstance(Set<T>());
-    }
-
     isTop() {
         return this.values === true;
     }

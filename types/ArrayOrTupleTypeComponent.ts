@@ -30,12 +30,12 @@ export class ArrayOrTupleTypeComponent extends RecursiveTypeComponent<number, {}
             return "[" + type.keySeq().sort().map(key => type.get(key)[0].toDefinition()).join(", ") + "]";
     }
 
-    valueForArrayLikeType([_, value]: TypeExt) {
+    valueForArrayLikeType([, value]: TypeExt) {
         return [value];
     }
 
     valueForTupleLikeType(arrayType: Map<number, TypeExt>) {
-        return arrayType.map(([_, value]) => value).toArray();
+        return arrayType.map(([, value]) => value).toArray();
     }
 
     tupleLikeRemoveIsPrefixRestricted() {

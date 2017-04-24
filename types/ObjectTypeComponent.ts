@@ -29,7 +29,7 @@ export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: str
         return "{" + type.keySeq().sort().map(key => `${key}: ${type.get(key)[0].toDefinition()}`).join(", ") + "}";
     }
 
-    valueForArrayLikeType([_, value]: TypeExt) {
+    valueForArrayLikeType([, value]: TypeExt) {
         return {"k": value};
     }
 
