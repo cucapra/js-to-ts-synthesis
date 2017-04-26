@@ -111,7 +111,7 @@ In the following list of heuristics, the symbol ∅ denotes a type component whi
 </tr>
 </tbody></table>
 
-**FunctionTypeComponent** (Currently incomplete, as the tool does not yet handle the deduction of types for function parameters / return values)
+**FunctionTypeComponent** (Currently incomplete, as the tool does not yet handle the deduction of types for higher order functions)
 <table>
 <thead>
 <tr>
@@ -179,4 +179,4 @@ In the following list of heuristics, the symbol ∅ denotes a type component whi
 </tr>
 </tbody></table>
 
-† This rule will only be applied when the --roundUpArgsFromBottom flag is provided on the command line. By default, this flag is set to false and the TypeDeducer won't try to introduce new type components. For example, if no test cases ever had a string for some parameter, it wouldn't try to introduce a string. Setting this to try makes the TypeDeducer more complete, but less controlled.
+† This rule will only be applied when the `--roundUpArgsFromBottom` flag is provided on the command line. By default, this flag is set to false and the TypeDeducer won't try to introduce new type components. For example, if no test cases ever had a string for some parameter, it wouldn't try to introduce a string. Setting this to true makes the TypeDeducer more complete, but less controlled.
