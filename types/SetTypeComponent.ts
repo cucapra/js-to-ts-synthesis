@@ -23,10 +23,6 @@ export abstract class SetTypeComponent<T> implements TypeComponent<T> {
         return other.values === true || (this.values !== true && this.values.isSubset(other.values));
     }
 
-    condenseInternalRepresentation() {
-        return this;
-    }
-
     isTop() {
         return this.values === true;
     }

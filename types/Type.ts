@@ -114,19 +114,6 @@ export class Type implements TypeComponent<{}> {
             && this.objectType.isSubtypeOf(type.objectType);
     }
 
-    condenseInternalRepresentation() {
-        return <this>new Type(
-            this.nullType.condenseInternalRepresentation(),
-            this.undefinedType.condenseInternalRepresentation(),
-            this.booleanType.condenseInternalRepresentation(),
-            this.numberType.condenseInternalRepresentation(),
-            this.stringType.condenseInternalRepresentation(),
-            this.functionType.condenseInternalRepresentation(),
-            this.arrayOrTupleType.condenseInternalRepresentation(),
-            this.objectType.condenseInternalRepresentation()
-        );
-    }
-
     toDefinition(): string {
         if (this.nullType.isTop()
                 && this.undefinedType.isTop()

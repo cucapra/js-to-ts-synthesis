@@ -14,12 +14,6 @@ export class LowerBoundTypeDeducer extends TypeDeducer {
             returnValueType = returnValueType.include(call.returnValue);
         }
 
-        for (let i = 0; i < argTypes.length; i++) {
-            argTypes[i] = argTypes[i].condenseInternalRepresentation();
-        }
-
-        returnValueType = returnValueType.condenseInternalRepresentation();
-
         return new FunctionTypeDefinition(calls, argTypes, returnValueType);
     }
 }

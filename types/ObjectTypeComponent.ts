@@ -1,18 +1,18 @@
 import {List, Map} from "immutable";
-import {RecursiveTypeComponent, TypeExt} from "./RecursiveTypeComponent";
+import {IsOptional, RecursiveTypeComponent, TypeExt} from "./RecursiveTypeComponent";
 import {Type} from "./Type";
 
 export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: string]: {}}> {
 
     static top = new ObjectTypeComponent(true);
-    static bottom = new ObjectTypeComponent({arrayLike: List<TypeExt>(), tupleLike: List<Map<string, TypeExt>>()});
+    static bottom = new ObjectTypeComponent({arrayLike: List<TypeExt>(), tupleLike: List<Map<string, [TypeExt, IsOptional]>>()});
 
-    newInstance(allowedTypes: true | { readonly arrayLike: List<TypeExt>, readonly tupleLike: List<Map<string, TypeExt>>}) {
+    newInstance(allowedTypes: true | { readonly arrayLike: List<TypeExt>, readonly tupleLike: List<Map<string, [TypeExt, IsOptional]>>}) {
         return <this>new ObjectTypeComponent(allowedTypes);
     }
 
     typeFor(obj: {[k: string]: {}}) {
-        return Map<string, TypeExt>(Object.keys(obj).sort().map(key => [key, [Type.bottom.include(obj[key]), obj[key]]]));
+        return Map<string, [TypeExt, IsOptional]>(Object.keys(obj).sort().map(key => [key, [[Type.bottom.include(obj[key]), obj[key]], false]]));
     }
 
     definitionOfTopType() {
@@ -23,20 +23,24 @@ export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: str
         return `{[key: string]: ${type.toDefinition()}}`;
     }
 
-    definitionOfTupleLikeType(type: Map<string, TypeExt>) {
-        if (type.isEmpty())
+    definitionOfTupleLikeType(tuple: Map<string, [TypeExt, IsOptional]>) {
+        if (tuple.isEmpty())
             return "object";
-        return "{" + type.keySeq().sort().map(key => `${key}: ${type.get(key)[0].toDefinition()}`).join(", ") + "}";
+        return "{" + tuple.keySeq().sort().map(key => {
+            let [[type], optional] = tuple.get(key);
+            return optional ? `${key}?: ${type.toDefinition()}` : `${key}: ${type.toDefinition()}`;
+        }).join(", ") + "}";
     }
 
     valueForArrayLikeType([, value]: TypeExt) {
         return {"k": value};
     }
 
-    valueForTupleLikeType(type: Map<string, TypeExt>) {
+    valueForTupleLikeType(type: Map<string, [TypeExt, IsOptional]>) {
         let result: {[k: string]: {}} = {};
         for (let key of type.keySeq().toArray()) {
-            result[key] = type.get(key)[1];
+            let [[, value]] = type.get(key);
+            result[key] = value;
         }
         return result;
     }
@@ -47,5 +51,9 @@ export class ObjectTypeComponent extends RecursiveTypeComponent<string, {[k: str
 
     tupleLikeRemoveIsPrefixRestricted() {
         return false;
+    }
+
+    removeField(type: Map<string, [TypeExt, IsOptional]>, index: string) {
+        return type.update(index, ([t]) => [t, true]);
     }
 }

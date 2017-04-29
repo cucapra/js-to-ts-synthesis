@@ -14,13 +14,10 @@ const TEST_TIMEOUT_WINDOW = 60000;
 
 const GIT_URL_PARSE_EXPECTED_LOWER = fs.readFileSync(path.join(__dirname, "/git-url-parse.expected.lower.d.ts"), "utf-8");
 const GIT_URL_PARSE_EXPECTED_SIMPLE = fs.readFileSync(path.join(__dirname, "/git-url-parse.expected.simple.d.ts"), "utf-8");
+const SIMPLE_OAUTH2_EXPECTED = fs.readFileSync(path.join(__dirname, "/simple-oauth2.expected.d.ts"), "utf-8");
 
 @mocha.suite
 class PipelineTest {
-    static before() {
-        tmp.setGracefulCleanup();
-    }
-
 
     @mocha.test
     @mocha.timeout(300000)
@@ -49,17 +46,6 @@ class PipelineTest {
         assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), GIT_URL_PARSE_EXPECTED_LOWER);
     }
 
-/*
-    @mocha.test
-    @mocha.timeout(300000)
-    testUpperBoundTypeDeducer() {
-        let workingDir = this.tempFolder();
-        let pipeline  = new Pipeline("https://github.com/IonicaBizau/git-url-parse", workingDir, TEST_TIMEOUT_WINDOW, new UpperBoundTypeDeducer(), {treatAllErrorsAsTypeErrors: true}, true);
-        pipeline.run();
-
-        assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), "export declare function gitUrlParse(url: string): {};\n");
-    }
-*/
     @mocha.test
     @mocha.timeout(300000)
     testSimpleTypeDeducer() {
@@ -75,7 +61,6 @@ class PipelineTest {
     }
 
     @mocha.test
-    @mocha.skip // Skip for now. Need to get rounding up of arrays/objects working first.
     @mocha.timeout(300000)
     testModuleThatExportsAnObject() {
         let workingDir = this.tempFolder();
@@ -86,10 +71,10 @@ class PipelineTest {
             {treatAllErrorsAsTypeErrors: true});
         pipeline.run();
 
-        assert.equal(fs.readFileSync(path.join(workingDir, "lib", "index.d.ts"), "utf-8"), "export declare function gitUrlParse(url: string): {};\n");
+        assert.equal(fs.readFileSync(path.join(workingDir, "index.d.ts"), "utf-8"), SIMPLE_OAUTH2_EXPECTED);
     }
 
     private tempFolder(): string {
-        return tmp.dirSync().name;
+        return tmp.dirSync({unsafeCleanup: true}).name;
     }
 }

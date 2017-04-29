@@ -1,6 +1,6 @@
 # Design Goals
 
-This document explains the various design goals of the JS-to-TS-Synthesis Pipeline. Although the tool is designed to be runnable on as many projects as possible, several assumptions must be made as far as the library's consistence and test suite.
+This document explains the various design goals of the JS-to-TS-Synthesis Pipeline. Although the tool is designed to be runnable on as many projects as possible, several assumptions must be made as far as the library's consistency and test suite.
 
 ## Motivation
 

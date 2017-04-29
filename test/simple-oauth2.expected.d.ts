@@ -1,0 +1,1 @@
+export declare function create(options: {auth: {authorizeHost?: string, tokenHost: "https://example.org"}, client: {id: string, secret: string}}): {accessToken?: object, authorizationCode?: object, clientCredentials?: object, ownerPassword?: object};

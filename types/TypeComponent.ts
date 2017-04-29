@@ -12,5 +12,4 @@ export interface TypeComponent<T> extends LatticeElement<[Validator, RoundUpPara
     include(value: T): this;
     includeType(type: this): this;
     isSubtypeOf(type: this): boolean;
-    condenseInternalRepresentation(): this;
 }

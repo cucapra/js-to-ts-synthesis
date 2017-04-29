@@ -3,6 +3,8 @@ import {Validator} from "../Validator";
 import {Type} from "./Type";
 import {RoundUpParameters, TypeComponent} from "./TypeComponent";
 
+export type IsOptional = boolean;
+
 // A type extended with an example value.
 export type TypeExt = [Type, {}];
 
@@ -15,18 +17,21 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
      * This common implementation supports arrays/tuples and objects.
      * In general, this can be a union of these, or the top type (any[] or object).
      */
-    constructor(private readonly allowedTypes: true | { readonly arrayLike: List<TypeExt>, readonly tupleLike: List<Map<IndexT, TypeExt>>}) {
+    constructor(private readonly allowedTypes: true | { readonly arrayLike: List<TypeExt>, readonly tupleLike: List<Map<IndexT, [TypeExt, IsOptional]>>}) {
     }
 
-    abstract newInstance(allowedTypes: true | { readonly arrayLike: List<TypeExt>, readonly tupleLike: List<Map<IndexT, TypeExt>>}): this;
+    abstract newInstance(allowedTypes: true | { readonly arrayLike: List<TypeExt>, readonly tupleLike: List<Map<IndexT, [TypeExt, IsOptional]>>}): this;
 
-    protected abstract typeFor(value: T): Map<IndexT, TypeExt>
+    protected abstract typeFor(value: T): Map<IndexT, [TypeExt, IsOptional]>
     protected abstract definitionOfTopType(): string;
     protected abstract definitionOfArrayLikeType(type: TypeExt): string;
-    protected abstract definitionOfTupleLikeType(type: Map<IndexT, TypeExt>): string;
+    protected abstract definitionOfTupleLikeType(type: Map<IndexT, [TypeExt, IsOptional]>): string;
 
     protected abstract valueForArrayLikeType(type: TypeExt): T;
-    protected abstract valueForTupleLikeType(type: Map<IndexT, TypeExt>): T;
+    protected abstract valueForTupleLikeType(type: Map<IndexT, [TypeExt, IsOptional]>): T;
+
+    /** Tuples will just remove the field. Objects will set it to optional. This should be overridden because of how Typescript treats object literals. */
+    protected abstract removeField(type: Map<IndexT, [TypeExt, IsOptional]>, index: IndexT): Map<IndexT, [TypeExt, IsOptional]>;
 
     /**
      * True for tuples (since [t1, t2] is valid, but [?, t2] isn't)
@@ -74,12 +79,15 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
         return true;
     }
 
-    /**
+    /*
+     * DUE TO TYPESCRIPT'S "Object literal may only specify known properties", this cannot be used.
+     *
      * Returns a new RecursiveTypeComponent with the following properties:
      * 1) No two types in arrayLike have a subtype relationship.
      * 2) No two types in tupleLike have a subtype relationship.
-     */
+     *
     condenseInternalRepresentation() {
+        /*
         if (this.allowedTypes === true)
             return this;
         let allowedTypes = this.allowedTypes;
@@ -103,9 +111,9 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
             }
         }).filter(e => e !== undefined).toList();
 
-        let tupleLike = List<Map<IndexT, TypeExt>>().withMutations(tupleLike => {
+        let tupleLike = List<Map<IndexT, [TypeExt, IsOptional]>>().withMutations(tupleLike => {
             for (let i = 0; i < allowedTypes.tupleLike.size; i++) {
-                let tuple = allowedTypes.tupleLike.get(i).map(([type, value]) => <TypeExt>[type.condenseInternalRepresentation(), value]).toMap();
+                let tuple = allowedTypes.tupleLike.get(i).map(([[type, value], optional]) => <[TypeExt, IsOptional]>[[type.condenseInternalRepresentation(), value], optional]).toMap();
 
                 if (tupleLike.every(tuple0 => !this.tupleIsSubtypeOf(tuple, tuple0))) {
 
@@ -120,10 +128,16 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
         }).filter(e => e !== undefined).toList();
 
         return this.newInstance({arrayLike: arrayLike, tupleLike: tupleLike});
-    }
+        return this;
+    }*/
 
-    private tupleIsSubtypeOf(thisTuple: Map<IndexT, [Type, {}]>, otherTuple: Map<IndexT, [Type, {}]>) {
-        return otherTuple.every(([type], key) => thisTuple.has(key) && thisTuple.get(key)[0].isSubtypeOf(type));
+    private tupleIsSubtypeOf(thisTuple: Map<IndexT, [TypeExt, IsOptional]>, otherTuple: Map<IndexT, [TypeExt, IsOptional]>) {
+        return otherTuple.every(([[type]], key) => {
+            if (!thisTuple.has(key))
+                return false;
+            let [[thisType]] = thisTuple.get(key);
+            return thisType.isSubtypeOf(type);
+        });
     }
 
     isTop() {
@@ -180,13 +194,13 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
     }
 
     /** Take the ascending paths for each underlying type, and return this same tuple with the new type in the old type's place. */
-    private recursiveAscendingPathsForTuple(tuple: Map<IndexT, TypeExt>, validator: Validator, params: RoundUpParameters) {
+    private recursiveAscendingPathsForTuple(tuple: Map<IndexT, [TypeExt, IsOptional]>, validator: Validator, params: RoundUpParameters) {
         return tuple.keySeq()
             .flatMap(key => {
-                let [type, value] = tuple.get(key);
+                let [[type, value], optional] = tuple.get(key);
                 return type.ascendingPaths([validator.forSubExpression(key), params])
-                    .map(([ascType, valid, ascRule, examples]) => <[Map<IndexT, TypeExt>, boolean, string, {}[]]>[
-                        tuple.set(key, [ascType, value]),
+                    .map(([ascType, valid, ascRule, examples]) => <[Map<IndexT, [TypeExt, IsOptional]>, boolean, string, {}[]]>[
+                        tuple.set(key, [[ascType, value], optional]),
                         valid,
                         ascRule,
                         examples]);
@@ -210,8 +224,8 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
             });
     }
 
-    private combineTuples(tuple1: Map<IndexT, TypeExt>, tuple2: Map<IndexT, TypeExt>) {
-        return tuple1.mergeWith(([type1, value1], [type2]) => [type1.includeType(type2), value1], tuple2);
+    private combineTuples(tuple1: Map<IndexT, [TypeExt, IsOptional]>, tuple2: Map<IndexT, [TypeExt, IsOptional]>) {
+        return tuple1.mergeWith(([[type1, value1], optional1], [[type2, ], optional2]) => [[type1.includeType(type2), value1], optional1 || optional2], tuple2);
     }
 
     private ascendingPathsForFieldRemove(validator: Validator) {
@@ -223,11 +237,15 @@ export abstract class RecursiveTypeComponent<IndexT extends number|string, T> im
             .filter(index => !allowedTypes.tupleLike.get(index).isEmpty())
             .flatMap(index => {
                 let tuple = allowedTypes.tupleLike.get(index);
-                let validKeysToRemove = this.tupleLikeRemoveIsPrefixRestricted() ? List([tuple.keySeq().max()]) : tuple.keySeq();
+                let validKeysToRemove = this.tupleLikeRemoveIsPrefixRestricted()
+                    ? List([tuple.keySeq().max()])
+                    : tuple.keySeq().filter(key => { let [, optional] = tuple.get(key); return !optional; });
                 return validKeysToRemove.map(key => {
                     let [valid, examples] = validator.validate({singleValue: true, value: () => this.valueForTupleLikeType(tuple.remove(key))});
                     return <[this, boolean, string, {}[]]>[
-                        this.newInstance({arrayLike: allowedTypes.arrayLike, tupleLike: allowedTypes.tupleLike.set(index, tuple.remove(key))}),
+                        this.newInstance({
+                            arrayLike: allowedTypes.arrayLike,
+                            tupleLike: allowedTypes.tupleLike.set(index, this.removeField(tuple, key))}),
                         valid,
                         "TUPLE-FIELD-REMOVE",
                         examples
