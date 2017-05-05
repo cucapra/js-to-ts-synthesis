@@ -5,6 +5,8 @@ import {injectInstrumentation, injectInstrumentationForTest} from "./Instrumenta
 import {FunctionModule, FunctionsMap, Module, ModuleParameters, ObjectModule} from "./Module";
 import {FunctionTypeDefinition} from "./TypeDeducer";
 
+let recursiveReadSync = require("recursive-readdir-sync");
+
 // Needed so that this can require the module.
 // tslint:disable-next-line:no-any
 (<any>global)._meta_ = {
@@ -17,7 +19,7 @@ import {FunctionTypeDefinition} from "./TypeDeducer";
 };
 
 function testDirectory(dir: string): string[] | undefined {
-    return fs.existsSync(dir) ? fs.readdirSync(dir).map(file => path.join(dir, file)) : undefined;
+    return fs.existsSync(dir) ? recursiveReadSync(dir) : undefined;
 }
 
 function testFile(file: string): string[] | undefined {
@@ -34,6 +36,8 @@ export class Workspace {
 
     constructor(directory: string, repoUri: string, testTimeoutWindow: number, moduleParameters: ModuleParameters) {
         console.log(`Working directory is ${directory}`);
+        if (!fs.existsSync(directory))
+            fs.mkdirSync(directory);
         this.directory = directory;
 
         // Clone from the repo.
@@ -45,17 +49,19 @@ export class Workspace {
         // Install tools for the execution tracer.
         this.runCommand("npm install babel-preset-env esprima");
 
-        let testFiles = testDirectory(path.join(directory, "test")) || testDirectory(path.join(directory, "tests ")) || testFile(path.join(directory, "test.js"));
+        let testFiles = testDirectory(path.join(directory, "test")) || testDirectory(path.join(directory, "tests")) || testFile(path.join(directory, "test.js"));
         if (testFiles !== undefined)
             this.testFiles = testFiles;
         else
              throw Error("Cannot find test directory");
 
         let packageJson = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf-8"));
+
         this.mainFile = path.join(directory, packageJson.main || packageJson.files[0]);
+        if (path.extname(this.mainFile) === "")
+            this.mainFile += ".js";
 
         injectInstrumentation(this.mainFile);
-
         let main = require(this.mainFile);
         switch (typeof main) {
             case "function":
@@ -87,6 +93,7 @@ export class Workspace {
     exportTypeDefinitions(typeDefinitions: FunctionsMap<FunctionTypeDefinition>) {
         let typeTestsFile = path.join(this.directory, "tests.ts");
         let typeTestsFd = fs.openSync(typeTestsFile, "w");
+        let exportedTypeDefinitions: string[] = [];
 
         for (let file of typeDefinitions.keySeq().toArray()) {
             console.log(`Exporting types for ${file}`);
@@ -103,11 +110,15 @@ export class Workspace {
                 }
             }
             fs.closeSync(definitionFd);
+
+            exportedTypeDefinitions.push(definitionFileNoExt + ".d.ts");
         }
 
         fs.closeSync(typeTestsFd);
 
         this.runCommand(`tsc ${typeTestsFile}`);
+
+        console.log(`Type definitions exported to ${exportedTypeDefinitions.join(", ")}`);
     }
 
     private runCommand(command: string) {

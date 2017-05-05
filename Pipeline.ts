@@ -84,11 +84,11 @@ export function main() {
 
     let pipeline = new Pipeline(
         args.repo,
-        args.dir,
+        path.resolve(args.dir),
         args.testTimeoutWindow,
         TYPE_DEDUCERS[args.typeDeducer]({
             roundUpParameters: {roundUpFromBottom: args.roundUpArgsFromBottom},
-            folderToWriteDebugging: path.join(args.dir, "output"),
+            folderToWriteDebugging: path.resolve(args.dir, "output"),
             generateImageForTypeRounding: args.generateImageForTypeRounding
         }),
         {treatAllErrorsAsTypeErrors: args.treatAllErrorsAsTypeErrors}

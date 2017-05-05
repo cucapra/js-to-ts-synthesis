@@ -32,6 +32,7 @@
     "logic-solver": "^2.0.1",
     "option.ts": "^0.3.0",
     "randomstring": "^1.1.5",
+    "recursive-readdir-sync": "^1.0.6",
     "ts-optional": "^1.0.2",
     "typescript-array-extensions": "^0.4.3",
     "yargs": "^6.6.0"

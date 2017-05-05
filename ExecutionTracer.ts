@@ -49,6 +49,7 @@ export class ExecutionTracer {
 
     private disableLinter() {
         fs.appendFileSync(path.join(this.workspace.directory, ".eslintignore"), "\n**/*.js");
+        fs.appendFileSync(path.join(this.workspace.directory, ".jshintignore"), "\n**/*.js");
     }
 
     private readInstrumentationOutput(instrumentationOutputFile: string, exportedFunctions: FunctionsMap<FunctionInfo>): FunctionsMap<FunctionCalls> {
