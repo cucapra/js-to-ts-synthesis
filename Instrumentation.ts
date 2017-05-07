@@ -1,8 +1,8 @@
 import { transformFileSync } from "babel-core";
 import * as fs from "fs";
 import * as path from "path";
+import {FunctionTagger} from "./FunctionTagger";
 import {allTags, FunctionInfo, FunctionsMap} from "./Module";
-import {tagFunctions} from "./TagFunctions";
 
 let Aran = require("aran");
 let js_beautify = require("js-beautify").js_beautify;
@@ -19,9 +19,9 @@ function injectAran(sourceFile: string): string {
     return js_beautify(Aran({namespace: "_meta_", traps: ["apply", "return"]}).instrument(source));
 }
 
-export function injectInstrumentation(sourceFile: string) {
+export function injectInstrumentation(sourceFile: string, tagger: FunctionTagger) {
     let source = injectAran(sourceFile);
-    source = tagFunctions(source);
+    source = tagger.tagFunctions(source, sourceFile);
 
     fs.writeFileSync(sourceFile, source);
 }

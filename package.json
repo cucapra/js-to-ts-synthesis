@@ -31,10 +31,13 @@
     "line-reader-sync": "^0.1.0",
     "logic-solver": "^2.0.1",
     "option.ts": "^0.3.0",
+    "override-require": "^1.1.1",
     "randomstring": "^1.1.5",
     "recursive-readdir-sync": "^1.0.6",
+    "resolve": "^1.3.3",
     "ts-optional": "^1.0.2",
     "typescript-array-extensions": "^0.4.3",
+    "vm2": "^3.4.6",
     "yargs": "^6.6.0"
   },
   "devDependencies": {
@@ -45,6 +48,7 @@
     "@types/mocha": "^2.2.39",
     "@types/node": "^7.0.5",
     "@types/randomstring": "^1.1.5",
+    "@types/resolve": "0.0.4",
     "@types/tmp": "0.0.32",
     "@types/yargs": "^6.6.0",
     "aran": "^1.3.1",

@@ -1,8 +1,10 @@
 import * as child_process from "child_process";
 import * as fs from "fs";
 import * as path from "path";
+import {FunctionTagger} from "./FunctionTagger";
 import {injectInstrumentation, injectInstrumentationForTest} from "./Instrumentation";
 import {FunctionModule, FunctionsMap, Module, ModuleParameters, ObjectModule} from "./Module";
+import {trackRequires} from "./TrackRequires";
 import {FunctionTypeDefinition} from "./TypeDeducer";
 
 let recursiveReadSync = require("recursive-readdir-sync");
@@ -29,7 +31,6 @@ function testFile(file: string): string[] | undefined {
 export class Workspace {
     directory: string;
     testFiles: string[];
-    mainFile: string;
     testTimeoutWindow: number;
     module: Module;
     instrumentationOutputFile: string;
@@ -56,22 +57,25 @@ export class Workspace {
              throw Error("Cannot find test directory");
 
         let packageJson = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf-8"));
+        if (!("main" in packageJson))
+            throw Error("Cannot find main file");
 
-        this.mainFile = path.join(directory, packageJson.main || packageJson.files[0]);
-        if (path.extname(this.mainFile) === "")
-            this.mainFile += ".js";
+        let tagger = new FunctionTagger();
 
-        injectInstrumentation(this.mainFile);
-        let main = require(this.mainFile);
+        // Require the main file, and inject dependencies onto any library that was loaded.
+        let main = trackRequires(directory, packageJson.main, filename => {
+            console.log(`Instrumenting library file ${filename}`);
+            injectInstrumentation(filename, tagger);
+        });
         switch (typeof main) {
             case "function":
-                this.module = new FunctionModule(main, this.mainFile, moduleParameters);
+                this.module = new FunctionModule(main, tagger, moduleParameters);
                 break;
             case "object":
-                this.module = new ObjectModule(main, this.mainFile, moduleParameters);
+                this.module = new ObjectModule(main, tagger, moduleParameters);
                 break;
             default:
-                throw new Error(`${this.mainFile} does not export a function or object`);
+                throw new Error(`${path.join(directory, packageJson.main)} does not export a function or object`);
         }
 
         this.instrumentationOutputFile = path.join(this.directory, "instrumentation_output.txt");

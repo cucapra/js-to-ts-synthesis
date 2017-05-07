@@ -1,4 +1,5 @@
 import {Map} from "immutable";
+import {FunctionTagger} from "./FunctionTagger";
 import {tagFor} from "./instrumentation/tag";
 import {ArgDef, argDefs} from "./StaticAnalysis";
 
@@ -47,13 +48,14 @@ export abstract class Module {
 
 // Some modules just export a single function.
 export class FunctionModule extends Module {
-    constructor(main: Function & {name: string}, mainFile: string, parameters: ModuleParameters) {
+    constructor(main: Function & {name: string}, tagger: FunctionTagger, parameters: ModuleParameters) {
+        let tag = tagFor(main);
         super(Map<SourceFile, Map<FunctionTag, FunctionInfo>>([
             [
-                mainFile,
+                tagger.sourceFileForTag(tag),
                 Map<FunctionTag, FunctionInfo>([
                     [
-                        tagFor(main),
+                        tag,
                         new FunctionInfo(main.name, main, parameters.treatAllErrorsAsTypeErrors)
                     ]
                 ])
@@ -63,32 +65,27 @@ export class FunctionModule extends Module {
 }
 
 export class ObjectModule extends Module {
-    constructor(main: object, mainFile: string, parameters: ModuleParameters) {
-        let exportedFunctions: [number, FunctionInfo][] = [];
-        ObjectModule.exportFunctions(exportedFunctions, main, [], parameters);
-        super(Map<SourceFile, Map<FunctionTag, FunctionInfo>>([
-            [
-                mainFile,
-                Map<FunctionTag, FunctionInfo>(exportedFunctions)
-            ]
-        ]));
+    constructor(main: object, tagger: FunctionTagger, parameters: ModuleParameters) {
+        super(ObjectModule.exportFunctions(Map<SourceFile, Map<FunctionTag, FunctionInfo>>(), main, tagger, [], parameters));
     }
 
+    // Immutable maps are easier to use with setIn.
     // tslint:disable-next-line:no-any
-    private static exportFunctions(exportedFunctions: [number, FunctionInfo][], target: any, path: string[], parameters: ModuleParameters) {
+    private static exportFunctions(exportedFunctions: Map<SourceFile, Map<FunctionTag, FunctionInfo>>, target: any, tagger: FunctionTagger, path: string[], parameters: ModuleParameters): Map<SourceFile, Map<FunctionTag, FunctionInfo>> {
         switch (typeof target) {
             case "function":
                 let name = path.join(".");
                 let tag = tagFor(target);
                 if (tag !== undefined)
-                    exportedFunctions.push([tag, new FunctionInfo(name, target, parameters.treatAllErrorsAsTypeErrors)]);
+                    return exportedFunctions.setIn([tagger.sourceFileForTag(tag), tag], new FunctionInfo(name, target, parameters.treatAllErrorsAsTypeErrors));
                 break;
             case "object":
                 for (let key in target) {
-                    ObjectModule.exportFunctions(exportedFunctions, target[key], path.concat([key]), parameters);
+                    exportedFunctions = ObjectModule.exportFunctions(exportedFunctions, target[key], tagger, path.concat([key]), parameters);
                 }
                 break;
         }
+        return exportedFunctions;
     }
 }
 
