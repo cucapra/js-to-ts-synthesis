@@ -47,6 +47,8 @@ We hope that these restrictions, while required in a black-box setting, do not s
 
 The following features are not yet implemented, due to an interest in analyzing the simple case first.
 
-* Objects are currently not supported. Because it is not clear when a function should be called as a constructor (with the new keyword). Furthermore, not all libraries require the `new` keyword to be used, making it unclear when functions on the returned object should be invoked with the `this` argument bound.
+* Objects are currently not supported. Because it is not clear when a function should be called as a constructor (with the new keyword). Furthermore, not all libraries require the `new` keyword to be used, making it unclear when functions on the returned object should be invoked with the `this` argument bound. The first step here would be to examine which functions are called as constructors, which Aran supports with its `construct` trap.
 * Polymorphic functions are not supported, as this requires additional machinery to deduce types. This may be implemented as a further extension.
 * Higher-order functions are not yet supported.
+* Returned objects are not searched for their prototype chain. So if an object is returned with fields "a" and "b", and "c" and "d" are on its prototype object, they will not be seen. This would be particularly useful for objects, but is not yet implemented.
+* More testing with different test frameworks is needed to ensure they all work correctly. Running some examples showed some conflicts, especially with the instrumentation library.

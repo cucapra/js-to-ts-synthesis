@@ -78,7 +78,7 @@ export class ObjectModule extends Module {
                 let tag = tagFor(target);
                 if (tag !== undefined)
                     return exportedFunctions.setIn([tagger.sourceFileForTag(tag), tag], new FunctionInfo(name, target, parameters.treatAllErrorsAsTypeErrors));
-                break;
+                // Also handle functions as objects to support tools like http://underscorejs.org/#oop
             case "object":
                 for (let key in target) {
                     exportedFunctions = ObjectModule.exportFunctions(exportedFunctions, target[key], tagger, path.concat([key]), parameters);
